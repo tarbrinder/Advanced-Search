@@ -30,7 +30,26 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
 
-## Completed (2026-04-24)
+## Completed (2026-04-24 · v2 — AI-powered iterative search)
+
+### Session 2 additions
+- [x] Search popup replaced "Search" CTA with dark navy **"✦ Find Best Match"** button
+- [x] Phase 2 — 5.5s AI loading animation (orbiting dots + 4 sequential stages + top progress bar + "Analysing filters…" footer)
+- [x] Phase 3 — AI results view:
+  - Top 3 picks with rank ribbons (🥇🥈🥉), emerald border, TrustSEAL / Payment Protected / X/5 specs / km badge row, rating · responsiveness% · price meta
+  - Inline **Buyer Requirement Assistant** — chip-style questions generated live by Gemini `gemini-2.5-flash-lite`
+  - Horizontal scroller for "Other relevant sellers" with compact cards and "View more sellers →" end card
+- [x] Two-way sync — assistant answers update left-panel spec chips; spec chip changes update assistant answers
+- [x] Filter changes trigger shimmer overlay on results for 900ms
+- [x] `Refine My Results` runs a shorter 2.5s loading animation and re-ranks the picks
+- [x] Modal is independent of the main dashboard; X closes and resets all state
+- [x] Product-specific ISQ specs (dining table, generator, helmet, tiles) shown in left panel based on keyword
+- [x] Backend `/api/ai/refine-questions` (FastAPI + emergentintegrations + gemini-2.5-flash-lite)
+  - Graceful fallback to deterministic keyword-based questions if LLM errors
+- [x] Colour tokens: navy #0f1f5c, emerald #0a6640, purple #6d28d9, amber #b45309
+- [x] Inter font, 10-16px border radius, 1px #e2e8f0 borders throughout
+
+## Completed (2026-04-24 · v1)
 - [x] Full dashboard layout matching reference design
 - [x] Header with indiamart logo, 23-city location picker, search + typeahead suggestions
 - [x] Search modal with Quantity / Material / Brand / Certification filters and Show More toggle

@@ -1,72 +1,207 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import json
 import logging
+import uuid
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
-
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# MongoDB
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
 
-# Define Models
+# --- Models ---------------------------------------------------------------
+
 class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
+    model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     client_name: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+
 class StatusCheckCreate(BaseModel):
     client_name: str
 
-# Add your routes to the router instead of directly to app
+
+class RefineRequest(BaseModel):
+    product_name: str
+    additional_notes: Optional[str] = ""
+    filled_specs: Dict[str, Any] = Field(default_factory=dict)
+    isq_specs: List[str] = Field(default_factory=list)
+    free_text_specs: List[str] = Field(default_factory=list)
+
+
+# --- Routes ----------------------------------------------------------------
+
 @api_router.get("/")
 async def root():
     return {"message": "Hello World"}
 
+
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
+    status_obj = StatusCheck(**input.model_dump())
     doc = status_obj.model_dump()
     doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
+    await db.status_checks.insert_one(doc)
     return status_obj
+
 
 @api_router.get("/status", response_model=List[StatusCheck])
 async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+    rows = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
+    for r in rows:
+        if isinstance(r['timestamp'], str):
+            r['timestamp'] = datetime.fromisoformat(r['timestamp'])
+    return rows
 
-# Include the router in the main app
+
+@api_router.post("/ai/refine-questions")
+async def refine_questions(req: RefineRequest):
+    """Generate dynamic B2B buyer-requirement questions via Gemini."""
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+
+    prompt = f"""You are an IndiaMART B2B procurement AI helping buyers specify requirements.
+
+INPUT:
+PRODUCT NAME: "{req.product_name}"
+BUYER NOTES: "{req.additional_notes or ''}"
+FILLED SPECS: {json.dumps(req.filled_specs)}
+ISQ SPECS: {json.dumps(req.isq_specs)}
+FREE-TEXT SPECS: {json.dumps(req.free_text_specs)}
+
+STEP 1 — EXTRACT KNOWN SPECS
+Extract only values explicitly present in the product name or filled filters.
+No inference. No assumptions. Keys must match ISQ spec names exactly. Max 3 specs.
+Example: "6-seater wooden dining table" → {{"Seating Capacity": "6 Seater", "Primary Material": "Wood"}}
+
+STEP 2 — CLASSIFY ISQ SPECS
+For each ISQ spec mark as:
+- REDUNDANT → already extracted in Step 1
+- RELEVANT → otherwise (default)
+
+STEP 3 — HINTS & OPTIONS
+For each RELEVANT spec:
+- isqHints: 2-4 word hint or null
+- isqOptions: up to 10 realistic Indian B2B market values. Required for all free-text specs. No "Other (Specify)".
+
+STEP 4 — DEPENDENCIES
+Only add spec dependencies if high confidence. Else return {{}}.
+
+STEP 5 — SUGGEST MISSING SPECS (max 5)
+Suggest important specs NOT already in ISQ, Step 1 extraction, or filled specs.
+Rules:
+- Prefer chip-style specs with 5-10 real options
+- Use text input only if no meaningful options exist
+- Skip boolean Yes/No specs
+- Skip trivial specs (e.g., country of origin)
+- Prioritise specs relevant to Indian B2B sourcing decisions
+
+Return JSON ONLY in this exact shape (no markdown, no preamble):
+{{
+  "extracted": {{ "<spec>": "<value>" }},
+  "isq_classified": [
+    {{"name": "<spec>", "status": "RELEVANT|REDUNDANT", "hint": "<2-4 words or null>", "options": ["..."], "type": "chip|text"}}
+  ],
+  "dependencies": {{}},
+  "suggested": [
+    {{"name": "<spec>", "hint": "<2-4 words>", "options": ["..."], "type": "chip|text"}}
+  ]
+}}
+"""
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"refine-{uuid.uuid4().hex[:8]}",
+            system_message="You are a B2B procurement AI. Return ONLY valid JSON.",
+        ).with_model("gemini", "gemini-2.5-flash-lite")
+
+        raw = await chat.send_message(UserMessage(text=prompt))
+        text = raw.strip() if isinstance(raw, str) else str(raw)
+        # strip code fences if present
+        if text.startswith("```"):
+            text = text.split("```", 2)[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip().rstrip("`").strip()
+        data = json.loads(text)
+        return data
+    except json.JSONDecodeError as e:
+        logger.warning(f"Gemini returned non-JSON: {e}; falling back")
+        return _fallback_questions(req)
+    except Exception as e:
+        logger.exception(f"Gemini call failed: {e}")
+        return _fallback_questions(req)
+
+
+def _fallback_questions(req: RefineRequest) -> Dict[str, Any]:
+    """Deterministic keyword-based fallback so UI never breaks."""
+    p = req.product_name.lower()
+    suggested = []
+    if any(k in p for k in ["generator", "diesel"]):
+        suggested = [
+            {"name": "Power Rating", "hint": "kVA range", "options": ["25 kVA", "62.5 kVA", "100 kVA", "125 kVA", "200 kVA", "320 kVA"], "type": "chip"},
+            {"name": "Cooling Type", "hint": "air/water", "options": ["Air Cooled", "Water Cooled"], "type": "chip"},
+            {"name": "Application", "hint": "usage", "options": ["Industrial", "Commercial", "Residential", "Construction", "Telecom"], "type": "chip"},
+            {"name": "Warranty", "hint": "years", "options": ["1 Year", "2 Years", "3 Years", "5 Years"], "type": "chip"},
+        ]
+    elif any(k in p for k in ["helmet", "safety", "ppe"]):
+        suggested = [
+            {"name": "Certification", "hint": "standard", "options": ["IS 2925", "CE", "ANSI Z89.1", "ISO 3873"], "type": "chip"},
+            {"name": "Color", "hint": "shade", "options": ["White", "Yellow", "Red", "Blue", "Orange", "Green"], "type": "chip"},
+            {"name": "Strap Type", "hint": "chin strap", "options": ["Ratchet", "Pin-lock", "Elastic"], "type": "chip"},
+            {"name": "MOQ", "hint": "min order", "options": ["50 Pieces", "100 Pieces", "500 Pieces", "1000 Pieces"], "type": "chip"},
+        ]
+    elif any(k in p for k in ["tile", "tiles", "wall", "floor"]):
+        suggested = [
+            {"name": "Size", "hint": "dimensions", "options": ["300x300 mm", "600x600 mm", "800x800 mm", "1200x600 mm"], "type": "chip"},
+            {"name": "Finish", "hint": "surface", "options": ["Matte", "Glossy", "Satin", "Polished"], "type": "chip"},
+            {"name": "Thickness", "hint": "in mm", "options": ["8 mm", "10 mm", "12 mm", "15 mm"], "type": "chip"},
+            {"name": "Application Area", "hint": "where used", "options": ["Bathroom", "Kitchen", "Living Room", "Outdoor"], "type": "chip"},
+        ]
+    elif any(k in p for k in ["conveyor", "belt"]):
+        suggested = [
+            {"name": "Width", "hint": "belt width", "options": ["400 mm", "600 mm", "800 mm", "1000 mm", "1200 mm"], "type": "chip"},
+            {"name": "Belt Type", "hint": "belt style", "options": ["Flat", "Modular", "Roller", "Cleated"], "type": "chip"},
+            {"name": "Load Capacity", "hint": "kg/hr", "options": ["Up to 500 kg/hr", "500-2000 kg/hr", "2000+ kg/hr"], "type": "chip"},
+        ]
+    else:
+        suggested = [
+            {"name": "Quality Grade", "hint": "quality tier", "options": ["Premium", "Standard", "Economy"], "type": "chip"},
+            {"name": "Delivery Timeline", "hint": "lead time", "options": ["Within 1 Week", "1-2 Weeks", "2-4 Weeks", "1+ Month"], "type": "chip"},
+            {"name": "MOQ", "hint": "min order qty", "options": ["10 Units", "50 Units", "100 Units", "500 Units"], "type": "chip"},
+            {"name": "Payment Terms", "hint": "payment mode", "options": ["Advance", "30 Days Credit", "LC", "Against Delivery"], "type": "chip"},
+        ]
+
+    return {
+        "extracted": {},
+        "isq_classified": [
+            {"name": s, "status": "RELEVANT", "hint": None, "options": [], "type": "chip"}
+            for s in req.isq_specs
+        ],
+        "dependencies": {},
+        "suggested": suggested,
+    }
+
+
+# Mount & middleware
 app.include_router(api_router)
 
 app.add_middleware(
@@ -77,12 +212,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
