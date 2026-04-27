@@ -30,6 +30,16 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
 
+## Completed (2026-04-27 · v3 — clean conversion-focused flow)
+- [x] Removed every "AI" mention from UI (kept only as backend prompt context)
+- [x] Removed sparkle icon from "Find Best Match" CTA — plain dark-navy pill
+- [x] Loading screen now shows ONE rotating message at a time (6 messages cycling), not cumulative stages
+- [x] After Find Best Match the left filter panel collapses to a top chips bar (Quantity, Phase, Fuel, Material…) — each chip removable with ×
+- [x] Top picks expanded to 5 cards in a single row (compact card variant) — full modal width available
+- [x] Whole modal is fixed-height (88vh) and never scrolls — chips bar + 5 cards + 1-question assistant strip all fit
+- [x] Buyer assistant now shows ONE question at a time with progress bar + Skip + auto-advance on choice; "Refine" auto-fires on the last question
+- [x] Persona-aware questions: Gemini prompt extended to also return Industry/Sector, Company Size, Buyer Role, Procurement Frequency, Company Name (for high quantity / B2B queries) plus product-specific extras beyond the initial filters
+
 ## Completed (2026-04-24 · v2 — AI-powered iterative search)
 
 ### Session 2 additions

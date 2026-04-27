@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { X, Star, CheckCircle2, Heart, Sparkles, Search as SearchIcon } from "lucide-react";
+import { X, Star, CheckCircle2, Heart, Search as SearchIcon } from "lucide-react";
 import { searchSellers } from "../data/mockData";
 import AILoading from "./search/AILoading";
 import TopPickCard from "./search/TopPickCard";
 import BuyerAssistant from "./search/BuyerAssistant";
-import OtherSellersScroller from "./search/OtherSellersScroller";
 import { rankSellers } from "./search/rankSellers";
 
 const UNITS = ["Meter", "kg", "Piece"];
@@ -12,7 +11,6 @@ const MATERIALS_ALL = ["Steel", "Aluminium", "Copper", "Plastic", "Brass", "Wood
 const BRANDS = ["Generic", "Branded", "OEM"];
 const CERTS = ["ISO Certified", "BIS Certified", "CE Marked"];
 
-// PRODUCT-SPECIFIC ISQ SPECS — simulate IndiaMART's spec schema per product
 function getProductSpecs(q) {
   const p = (q || "").toLowerCase();
   if (p.includes("dining") || p.includes("table")) {
@@ -51,8 +49,7 @@ function getProductSpecs(q) {
 }
 
 export default function SearchModal({ open, query, onClose }) {
-  // phase: 'filters' | 'loading' | 'results'
-  const [phase, setPhase] = useState("filters");
+  const [phase, setPhase] = useState("filters"); // filters | loading | results
   const [loadingMs, setLoadingMs] = useState(5500);
 
   const [unit, setUnit] = useState("Meter");
@@ -61,7 +58,7 @@ export default function SearchModal({ open, query, onClose }) {
   const [selectedMaterials, setSelectedMaterials] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedCerts, setSelectedCerts] = useState([]);
-  const [productSpecs, setProductSpecs] = useState({}); // { "Seating Capacity": "6 Seater" }
+  const [productSpecs, setProductSpecs] = useState({});
   const [assistantAnswers, setAssistantAnswers] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [shimmer, setShimmer] = useState(false);
@@ -72,7 +69,6 @@ export default function SearchModal({ open, query, onClose }) {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  // Reset state when modal opens with new query
   useEffect(() => {
     if (open) {
       setPhase("filters");
@@ -90,17 +86,13 @@ export default function SearchModal({ open, query, onClose }) {
   const specs = useMemo(() => getProductSpecs(query), [query]);
   const rawSellers = useMemo(() => (open ? searchSellers(query) : []), [open, query]);
 
-  const topPicks = useMemo(() => {
-    const ranked = rankSellers(rawSellers, { ...productSpecs, ...assistantAnswers });
-    return ranked.slice(0, 3);
-  }, [rawSellers, productSpecs, assistantAnswers]);
+  const ranked = useMemo(
+    () => rankSellers(rawSellers, { ...productSpecs, ...assistantAnswers }),
+    [rawSellers, productSpecs, assistantAnswers]
+  );
+  const topPicks = useMemo(() => ranked.slice(0, 5), [ranked]);
 
-  const otherSellers = useMemo(() => {
-    const ranked = rankSellers(rawSellers, { ...productSpecs, ...assistantAnswers });
-    return ranked.slice(3);
-  }, [rawSellers, productSpecs, assistantAnswers]);
-
-  const toggle = (list, setList, value) => {
+  const toggleArr = (list, setList, value) => {
     if (list.includes(value)) setList(list.filter((v) => v !== value));
     else setList([...list, value]);
   };
@@ -117,33 +109,49 @@ export default function SearchModal({ open, query, onClose }) {
     setPhase("loading");
   };
 
-  // Two-way sync: assistant answer → update productSpecs so chip panel reflects
+  const triggerShimmer = () => {
+    setShimmer(true);
+    setTimeout(() => setShimmer(false), 800);
+  };
+
   const handleAssistantAnswer = (specName, value) => {
     setAssistantAnswers((prev) => ({ ...prev, [specName]: value }));
-    // If the spec matches a product spec in the left panel, sync it
     if (specs.some((s) => s.name === specName)) {
       setProductSpecs((prev) => ({ ...prev, [specName]: value }));
     }
-    // trigger shimmer refresh on results
-    if (phase === "results") {
-      setShimmer(true);
-      setTimeout(() => setShimmer(false), 900);
-    }
+    if (phase === "results") triggerShimmer();
   };
 
   const handleSpecChipChange = (specName, value) => {
     setProductSpecs((prev) => ({ ...prev, [specName]: value }));
     setAssistantAnswers((prev) => ({ ...prev, [specName]: value }));
-    if (phase === "results") {
-      setShimmer(true);
-      setTimeout(() => setShimmer(false), 900);
-    }
+    if (phase === "results") triggerShimmer();
   };
 
-  if (!open) return null;
+  // Build the chip filters for the top bar (results phase)
+  const topChips = useMemo(() => {
+    const list = [];
+    if (qty) list.push({ key: "Quantity", value: `${qty} ${unit}`, onRemove: () => setQty("") });
+    Object.entries(productSpecs).forEach(([k, v]) => {
+      if (v) list.push({ key: k, value: v, onRemove: () => handleSpecChipChange(k, null) });
+    });
+    selectedMaterials.forEach((m) =>
+      list.push({ key: "Material", value: m, onRemove: () => toggleArr(selectedMaterials, setSelectedMaterials, m) })
+    );
+    selectedBrands.forEach((b) =>
+      list.push({ key: "Brand", value: b, onRemove: () => toggleArr(selectedBrands, setSelectedBrands, b) })
+    );
+    selectedCerts.forEach((c) =>
+      list.push({ key: "Cert", value: c, onRemove: () => toggleArr(selectedCerts, setSelectedCerts, c) })
+    );
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qty, unit, productSpecs, selectedMaterials, selectedBrands, selectedCerts]);
 
+  if (!open) return null;
   const materialsVisible = showAllMaterials ? MATERIALS_ALL : MATERIALS_ALL.slice(0, 5);
 
+  // ============ MODAL CHROME ============
   return (
     <div
       data-testid="search-modal"
@@ -151,290 +159,349 @@ export default function SearchModal({ open, query, onClose }) {
       style={{ fontFamily: "Inter, ui-sans-serif, system-ui" }}
     >
       <div
-        className="bg-white w-full max-w-[1160px] max-h-[92vh] h-[92vh] rounded-[16px] shadow-2xl flex flex-col overflow-hidden"
+        className="bg-white w-full max-w-[1180px] h-[88vh] rounded-[16px] shadow-2xl flex flex-col overflow-hidden"
         style={{ animation: "fadeIn 0.18s ease-out" }}
       >
-        {/* Modal header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2.5">
             <SearchIcon size={16} className="text-[#0f1f5c]" />
-            <span
-              data-testid="search-modal-query"
-              className="text-[#0a6640] font-bold text-[17px] tracking-tight"
-            >
+            <span data-testid="search-modal-query" className="text-[#0a6640] font-bold text-[16px] tracking-tight">
               {query}
             </span>
-            {phase === "results" && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#6d28d9]/10 text-[#6d28d9]">
-                AI Curated
-              </span>
-            )}
           </div>
           <button
             data-testid="search-modal-close"
             onClick={onClose}
             className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 grid grid-cols-[280px_1fr] overflow-hidden">
-          {/* LEFT FILTER PANEL — always visible */}
-          <aside
-            data-testid="filters-panel"
-            className="border-r border-slate-100 bg-[#f8fafc] flex flex-col overflow-hidden"
-          >
-            <div className="flex-1 overflow-y-auto p-5 pb-4 space-y-5">
-              {/* Quantity */}
-              <div>
-                <div className="text-[11px] font-semibold text-slate-700 mb-2 uppercase tracking-wide">Quantity</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    data-testid="qty-input"
-                    type="number"
-                    value={qty}
-                    onChange={(e) => setQty(e.target.value)}
-                    placeholder="0"
-                    className="w-16 h-8 px-2 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1f5c]/30 focus:border-[#0f1f5c]"
-                  />
-                  <div className="flex rounded-md border border-slate-200 overflow-hidden bg-white">
-                    {UNITS.map((u) => (
-                      <button
-                        key={u}
-                        data-testid={`unit-${u}`}
-                        onClick={() => setUnit(u)}
-                        className={`px-2.5 h-8 text-[11px] font-medium transition-colors ${
-                          unit === u ? "bg-teal-500 text-white" : "text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        {u}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Product-specific ISQ specs */}
-              {specs.map((spec) => (
-                <div key={spec.name} data-testid={`spec-filter-${spec.name}`}>
-                  <div className="text-[11px] font-semibold text-slate-700 mb-2 uppercase tracking-wide">
-                    {spec.name}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {spec.options.map((opt) => {
-                      const selected = productSpecs[spec.name] === opt;
-                      return (
-                        <button
-                          key={opt}
-                          data-testid={`spec-chip-${spec.name}-${opt}`}
-                          onClick={() => handleSpecChipChange(spec.name, selected ? null : opt)}
-                          className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
-                            selected
-                              ? "bg-teal-500 border-teal-500 text-white font-semibold"
-                              : "border-slate-200 text-slate-600 hover:border-teal-400 bg-white"
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              {/* Material */}
-              <div>
-                <div className="text-[11px] font-semibold text-slate-700 mb-2 uppercase tracking-wide">Material</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {materialsVisible.map((m) => (
-                    <button
-                      key={m}
-                      data-testid={`material-${m}`}
-                      onClick={() => toggle(selectedMaterials, setSelectedMaterials, m)}
-                      className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
-                        selectedMaterials.includes(m)
-                          ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
-                          : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setShowAllMaterials((s) => !s)}
-                  data-testid="toggle-materials"
-                  className="mt-1.5 text-[11px] text-teal-600 font-semibold hover:underline"
-                >
-                  {showAllMaterials ? "Show Less ↑" : "Show More ↓"}
-                </button>
-              </div>
-
-              {/* Brand */}
-              <div>
-                <div className="text-[11px] font-semibold text-slate-700 mb-2 uppercase tracking-wide">Brand</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {BRANDS.map((b) => (
-                    <button
-                      key={b}
-                      data-testid={`brand-${b}`}
-                      onClick={() => toggle(selectedBrands, setSelectedBrands, b)}
-                      className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
-                        selectedBrands.includes(b)
-                          ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
-                          : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
-                      }`}
-                    >
-                      {b}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Certification */}
-              <div>
-                <div className="text-[11px] font-semibold text-slate-700 mb-2 uppercase tracking-wide">Certification</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {CERTS.map((c) => (
-                    <button
-                      key={c}
-                      data-testid={`cert-${c}`}
-                      onClick={() => toggle(selectedCerts, setSelectedCerts, c)}
-                      className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
-                        selectedCerts.includes(c)
-                          ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
-                          : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Find Best Match — dark navy */}
-            <div className="p-4 border-t border-slate-200 bg-white">
-              <button
-                data-testid="find-best-match"
-                onClick={() => handleFindBestMatch(5500)}
-                disabled={phase === "loading"}
-                className="w-full h-11 rounded-[10px] bg-[#0f1f5c] hover:bg-[#172d80] active:bg-[#0a1748] disabled:opacity-60 text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
-              >
-                <Sparkles size={15} className="text-amber-300" />
-                Find Best Match
-              </button>
-            </div>
-          </aside>
-
-          {/* RIGHT PANEL — switches between filters results / loading / ai results */}
-          <div className="flex flex-col overflow-hidden relative">
-            {phase === "filters" && (
-              <RightDefault
-                sellers={rawSellers}
-                query={query}
-                favorites={favorites}
-                toggleFav={toggleFav}
-              />
-            )}
-
-            {phase === "loading" && (
-              <AILoading durationMs={loadingMs} onDone={() => setPhase("results")} />
-            )}
-
-            {phase === "results" && (
-              <div className="flex-1 overflow-y-auto p-5 space-y-6 relative">
-                {shimmer && (
-                  <div
-                    data-testid="shimmer"
-                    className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center"
-                  >
-                    <div className="flex items-center gap-2 text-[12px] font-semibold text-[#0f1f5c]">
-                      <span className="w-2 h-2 rounded-full bg-[#6d28d9] animate-pulse" />
-                      Refreshing results…
-                    </div>
-                  </div>
-                )}
-
-                {/* Section A: Top 3 picks */}
-                <div data-testid="top-picks-section">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[14px] font-bold text-[#0f1f5c] flex items-center gap-2">
-                      <Sparkles size={15} className="text-amber-500" />
-                      Top 3 AI Picks for you
-                    </h3>
-                    <span className="text-[10px] font-bold bg-[#6d28d9]/10 text-[#6d28d9] px-2 py-0.5 rounded-full">
-                      AI Curated
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    {topPicks.map((s, i) => (
-                      <TopPickCard key={s.name + i} seller={s} rank={i} />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Section B: Buyer Assistant */}
-                <BuyerAssistant
-                  productName={query}
-                  filledSpecs={productSpecs}
-                  isqSpecs={specs.map((s) => s.name)}
-                  answers={assistantAnswers}
-                  onAnswer={handleAssistantAnswer}
-                  onRefine={() => handleFindBestMatch(2500)}
-                />
-
-                {/* Section C: Other sellers scroller */}
-                <OtherSellersScroller sellers={otherSellers} />
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Body — different layout per phase */}
+        {phase !== "results" ? (
+          <FiltersBody
+            phase={phase}
+            loadingMs={loadingMs}
+            onLoaded={() => setPhase("results")}
+            specs={specs}
+            unit={unit} setUnit={setUnit}
+            qty={qty} setQty={setQty}
+            productSpecs={productSpecs}
+            handleSpecChipChange={handleSpecChipChange}
+            materialsVisible={materialsVisible}
+            showAllMaterials={showAllMaterials}
+            setShowAllMaterials={setShowAllMaterials}
+            selectedMaterials={selectedMaterials}
+            setSelectedMaterials={setSelectedMaterials}
+            selectedBrands={selectedBrands}
+            setSelectedBrands={setSelectedBrands}
+            selectedCerts={selectedCerts}
+            setSelectedCerts={setSelectedCerts}
+            toggleArr={toggleArr}
+            sellers={rawSellers}
+            query={query}
+            favorites={favorites}
+            toggleFav={toggleFav}
+            onFindBestMatch={() => handleFindBestMatch(5500)}
+          />
+        ) : (
+          <ResultsBody
+            shimmer={shimmer}
+            topChips={topChips}
+            topPicks={topPicks}
+            query={query}
+            qtyVal={Number(qty) || 0}
+            specs={specs}
+            productSpecs={productSpecs}
+            answers={assistantAnswers}
+            onAnswer={handleAssistantAnswer}
+            onRefine={() => handleFindBestMatch(2500)}
+            otherCount={Math.max(0, ranked.length - 5)}
+          />
+        )}
       </div>
 
       <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.97); }
-          to { opacity: 1; transform: scale(1); }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.97);} to { opacity: 1; transform: scale(1);} }
       `}</style>
     </div>
   );
 }
 
-// --- RIGHT PANEL — default "filters" state ------------------------------
+// ============ FILTERS BODY (Phase 1 + Phase 2) ============
+function FiltersBody({
+  phase, loadingMs, onLoaded,
+  specs, unit, setUnit, qty, setQty,
+  productSpecs, handleSpecChipChange,
+  materialsVisible, showAllMaterials, setShowAllMaterials,
+  selectedMaterials, setSelectedMaterials,
+  selectedBrands, setSelectedBrands,
+  selectedCerts, setSelectedCerts,
+  toggleArr,
+  sellers, query, favorites, toggleFav,
+  onFindBestMatch,
+}) {
+  return (
+    <div className="flex-1 grid grid-cols-[280px_1fr] overflow-hidden min-h-0">
+      {/* LEFT FILTER PANEL */}
+      <aside className="border-r border-slate-100 bg-[#f8fafc] flex flex-col overflow-hidden min-h-0" data-testid="filters-panel">
+        <div className="flex-1 overflow-y-auto p-5 pb-4 space-y-5 min-h-0">
+          <div>
+            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Quantity</div>
+            <div className="flex items-center gap-2">
+              <input
+                data-testid="qty-input"
+                type="number"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+                placeholder="0"
+                className="w-16 h-8 px-2 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1f5c]/30 focus:border-[#0f1f5c]"
+              />
+              <div className="flex rounded-md border border-slate-200 overflow-hidden bg-white">
+                {UNITS.map((u) => (
+                  <button
+                    key={u}
+                    data-testid={`unit-${u}`}
+                    onClick={() => setUnit(u)}
+                    className={`px-2.5 h-8 text-[11px] font-medium transition-colors ${
+                      unit === u ? "bg-teal-500 text-white" : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {u}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
+          {specs.map((spec) => (
+            <div key={spec.name} data-testid={`spec-filter-${spec.name}`}>
+              <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">{spec.name}</div>
+              <div className="flex flex-wrap gap-1.5">
+                {spec.options.map((opt) => {
+                  const selected = productSpecs[spec.name] === opt;
+                  return (
+                    <button
+                      key={opt}
+                      data-testid={`spec-chip-${spec.name}-${opt}`}
+                      onClick={() => handleSpecChipChange(spec.name, selected ? null : opt)}
+                      className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                        selected
+                          ? "bg-teal-500 border-teal-500 text-white font-semibold"
+                          : "border-slate-200 text-slate-600 hover:border-teal-400 bg-white"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div>
+            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Material</div>
+            <div className="flex flex-wrap gap-1.5">
+              {materialsVisible.map((m) => (
+                <button
+                  key={m}
+                  data-testid={`material-${m}`}
+                  onClick={() => toggleArr(selectedMaterials, setSelectedMaterials, m)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                    selectedMaterials.includes(m)
+                      ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
+                      : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowAllMaterials((s) => !s)}
+              className="mt-1.5 text-[11px] text-teal-600 font-semibold hover:underline"
+            >
+              {showAllMaterials ? "Show Less ↑" : "Show More ↓"}
+            </button>
+          </div>
+
+          <div>
+            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Brand</div>
+            <div className="flex flex-wrap gap-1.5">
+              {BRANDS.map((b) => (
+                <button
+                  key={b}
+                  data-testid={`brand-${b}`}
+                  onClick={() => toggleArr(selectedBrands, setSelectedBrands, b)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                    selectedBrands.includes(b)
+                      ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
+                      : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                  }`}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Certification</div>
+            <div className="flex flex-wrap gap-1.5">
+              {CERTS.map((c) => (
+                <button
+                  key={c}
+                  data-testid={`cert-${c}`}
+                  onClick={() => toggleArr(selectedCerts, setSelectedCerts, c)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                    selectedCerts.includes(c)
+                      ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
+                      : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 border-t border-slate-200 bg-white shrink-0">
+          <button
+            data-testid="find-best-match"
+            onClick={onFindBestMatch}
+            disabled={phase === "loading"}
+            className="w-full h-11 rounded-[10px] bg-[#0f1f5c] hover:bg-[#172d80] active:bg-[#0a1748] disabled:opacity-60 text-white text-[13px] font-bold transition-all shadow-sm"
+          >
+            Find Best Match
+          </button>
+        </div>
+      </aside>
+
+      {/* RIGHT — sellers grid OR loading */}
+      <div className="flex flex-col overflow-hidden min-h-0 relative">
+        {phase === "filters" && (
+          <RightDefault sellers={sellers} query={query} favorites={favorites} toggleFav={toggleFav} />
+        )}
+        {phase === "loading" && (
+          <AILoading durationMs={loadingMs} onDone={onLoaded} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============ RESULTS BODY (Phase 3) ============
+function ResultsBody({ shimmer, topChips, topPicks, query, qtyVal, specs, productSpecs, answers, onAnswer, onRefine, otherCount }) {
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
+      {shimmer && (
+        <div data-testid="shimmer" className="absolute inset-0 bg-white/70 backdrop-blur-sm z-20 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-[12px] font-semibold text-[#0f1f5c]">
+            <span className="w-2 h-2 rounded-full bg-[#6d28d9] animate-pulse" />
+            Refreshing results…
+          </div>
+        </div>
+      )}
+
+      {/* Top filter chips bar */}
+      <div className="px-5 py-3 border-b border-slate-100 shrink-0 bg-white" data-testid="top-chips-bar">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10.5px] font-semibold text-slate-500 uppercase tracking-wide">Filters</span>
+          {topChips.length === 0 && (
+            <span className="text-[11px] text-slate-400">No filters applied</span>
+          )}
+          {topChips.map((chip, i) => (
+            <button
+              key={`${chip.key}-${chip.value}-${i}`}
+              data-testid={`chip-${chip.key}-${chip.value}`}
+              onClick={chip.onRemove}
+              className="group inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-medium hover:bg-teal-100 transition-colors"
+            >
+              <span className="text-teal-600/80 text-[10px]">{chip.key}:</span>
+              <span className="font-semibold">{chip.value}</span>
+              <span className="w-4 h-4 rounded-full flex items-center justify-center bg-teal-100 group-hover:bg-teal-200 text-teal-700">
+                <X size={10} strokeWidth={2.5} />
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Top 5 sellers row — flex-grow takes remaining vertical space */}
+      <div className="flex-1 px-5 pt-4 min-h-0 flex flex-col">
+        <div className="flex items-center justify-between mb-3 shrink-0">
+          <h3 className="text-[13px] font-bold text-[#0f1f5c]">Top 5 picks for you</h3>
+          <button
+            data-testid="view-more-link"
+            className="text-[11px] font-semibold text-teal-600 hover:underline"
+          >
+            View {otherCount} more sellers →
+          </button>
+        </div>
+        <div
+          className="grid grid-cols-5 gap-3 min-h-0 flex-1 overflow-hidden"
+          data-testid="top-picks-grid"
+        >
+          {topPicks.map((s, i) => (
+            <TopPickCard key={s.name + i} seller={s} rank={i} showRibbon={i < 3} />
+          ))}
+          {topPicks.length === 0 && (
+            <div className="col-span-5 text-center text-[12px] text-slate-500 py-10">
+              No matches found
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Buyer assistant — single-line compact strip at bottom */}
+      <div className="p-4 border-t border-slate-100 shrink-0 bg-[#f8fafc]">
+        <BuyerAssistant
+          productName={query}
+          filledSpecs={productSpecs}
+          isqSpecs={specs.map((s) => s.name)}
+          quantity={qtyVal}
+          answers={answers}
+          onAnswer={onAnswer}
+          onRefine={onRefine}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ============ Right panel default (sellers grid in filters phase) ==========
 function RightDefault({ sellers, query, favorites, toggleFav }) {
   return (
     <>
-      <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-        <div className="text-[13px] font-semibold text-slate-800">
+      <div className="px-6 pt-3 pb-2 flex items-center justify-between shrink-0">
+        <div className="text-[12.5px] font-semibold text-slate-800">
           Relevant Sellers <span className="text-slate-400 font-normal">· {sellers.length} found</span>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-5 min-h-0">
         {sellers.length === 0 ? (
           <div className="h-full flex items-center justify-center text-sm text-slate-500 py-20">
             No sellers found for "{query}"
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4" data-testid="sellers-grid">
+          <div className="grid grid-cols-3 gap-3" data-testid="sellers-grid">
             {sellers.map((s, i) => (
               <div
                 key={s.name + i}
                 data-testid={`seller-${s.name}`}
-                className="group bg-white border border-slate-200 rounded-[10px] overflow-hidden hover:border-teal-400 hover:shadow-md transition-all"
+                className="bg-white border border-slate-200 rounded-[10px] overflow-hidden hover:border-teal-400 hover:shadow-md transition-all"
               >
                 <div className="relative">
                   <img
                     src={s.image}
                     alt={s.name}
-                    className="w-full h-36 object-cover"
+                    className="w-full h-32 object-cover"
                     onError={(e) => { e.currentTarget.src = "https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=400"; }}
                   />
-                  <div className="absolute top-2 left-2 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-md">
+                  <div className="absolute top-2 left-2 bg-slate-900 text-white text-[11px] font-bold px-2 py-0.5 rounded-full shadow-md">
                     {s.price}
                   </div>
                   <button
@@ -442,30 +509,27 @@ function RightDefault({ sellers, query, favorites, toggleFav }) {
                     className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/95 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white"
                     data-testid={`fav-${s.name}`}
                   >
-                    <Heart
-                      size={13}
-                      className={favorites.has(s.name) ? "fill-red-500 text-red-500" : "text-slate-500"}
-                    />
+                    <Heart size={13} className={favorites.has(s.name) ? "fill-red-500 text-red-500" : "text-slate-500"} />
                   </button>
                 </div>
-                <div className="p-3">
-                  <div className="font-bold text-[13px] text-slate-900 truncate">{s.name}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{s.location}</div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded text-amber-700 text-[11px] font-semibold">
+                <div className="p-2.5">
+                  <div className="font-bold text-[12.5px] text-slate-900 truncate">{s.name}</div>
+                  <div className="text-[10.5px] text-slate-500 mt-0.5">{s.location}</div>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="flex items-center gap-0.5 text-amber-700 font-semibold text-[10.5px]">
                       <Star size={10} className="fill-amber-500 text-amber-500" />
                       {s.rating}
-                    </div>
-                    <span className="text-[11px] text-slate-500">({s.reviews})</span>
+                    </span>
+                    <span className="text-[10.5px] text-slate-500">({s.reviews})</span>
                     {s.gst && (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 ml-auto">
-                        <CheckCircle2 size={11} className="text-emerald-500" /> GST
+                      <span className="ml-auto inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700">
+                        <CheckCircle2 size={10} className="text-emerald-500" /> GST
                       </span>
                     )}
                   </div>
                   <button
                     data-testid={`enquiry-${s.name}`}
-                    className="mt-3 w-full h-9 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-xs font-semibold transition-colors"
+                    className="mt-2 w-full h-8 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-[11.5px] font-bold transition-colors"
                   >
                     Send Enquiry
                   </button>

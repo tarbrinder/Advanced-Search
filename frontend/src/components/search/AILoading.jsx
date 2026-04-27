@@ -1,34 +1,38 @@
 import React, { useEffect, useState } from "react";
 
 const STAGES = [
-  "Building seller universe…",
-  "Matching your specifications…",
-  "Checking proximity & trust scores…",
-  "Curating your top matches…",
+  "Reaching out to verified sellers",
+  "Matching your specifications",
+  "Checking proximity & trust scores",
+  "Comparing prices across catalogs",
+  "Filtering for response time",
+  "Curating your top matches",
 ];
 
 /**
- * Loading animation — 5–6 seconds (or `durationMs`), 4 sequential stage labels,
- * thin progress bar at top, subtle footer.
+ * Loading animation — single rotating message (one at a time),
+ * thin progress bar at top.
  */
 export default function AILoading({ durationMs = 5500, onDone }) {
-  const [stage, setStage] = useState(0);
+  const [stageIdx, setStageIdx] = useState(0);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const stageStep = durationMs / STAGES.length;
-    const stageTimers = STAGES.map((_, i) =>
-      setTimeout(() => setStage(i + 1), i * stageStep)
-    );
+    const timer = setInterval(() => {
+      setStageIdx((i) => (i + 1) % STAGES.length);
+    }, stageStep);
+
     const start = Date.now();
     const tick = setInterval(() => {
       const pct = Math.min(100, ((Date.now() - start) / durationMs) * 100);
       setProgress(pct);
       if (pct >= 100) clearInterval(tick);
     }, 60);
-    const done = setTimeout(() => onDone?.(), durationMs + 200);
+
+    const done = setTimeout(() => onDone?.(), durationMs + 150);
     return () => {
-      stageTimers.forEach(clearTimeout);
+      clearInterval(timer);
       clearInterval(tick);
       clearTimeout(done);
     };
@@ -55,51 +59,25 @@ export default function AILoading({ durationMs = 5500, onDone }) {
             <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-[#0a6640]" />
             <span className="absolute top-1/2 left-0 -translate-y-1/2 w-2 h-2 rounded-full bg-[#b45309]" />
           </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0f1f5c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2l2.39 6.95L22 10l-5.61 4.09L18.18 22 12 17.77 5.82 22l1.79-7.91L2 10l7.61-1.05z" />
-            </svg>
-          </div>
         </div>
 
-        <div className="space-y-2.5 min-h-[140px]">
-          {STAGES.map((label, i) => {
-            const visible = i < stage;
-            const active = i === stage - 1;
-            return (
-              <div
-                key={label}
-                data-testid={`ai-stage-${i}`}
-                className={`flex items-center gap-2.5 justify-center transition-all duration-500 ${
-                  visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-                }`}
-              >
-                {visible && !active && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0a6640" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-                {active && (
-                  <span className="w-2 h-2 rounded-full bg-[#6d28d9] animate-pulse" />
-                )}
-                <span
-                  className={`text-[13px] font-medium ${
-                    active ? "text-[#0f1f5c]" : "text-slate-500"
-                  }`}
-                >
-                  {label}
-                </span>
-              </div>
-            );
-          })}
+        {/* Single rotating message */}
+        <div className="h-7 flex items-center justify-center" data-testid="ai-stage-label">
+          <span
+            key={stageIdx}
+            className="text-[14px] font-semibold text-[#0f1f5c] animate-[fadeSwap_0.45s_ease-out]"
+          >
+            {STAGES[stageIdx]}…
+          </span>
         </div>
       </div>
 
-      <div className="pb-6 text-center">
-        <span className="text-[11px] text-slate-400 tracking-wide">
-          Analysing filters + your search query
-        </span>
-      </div>
+      <style>{`
+        @keyframes fadeSwap {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

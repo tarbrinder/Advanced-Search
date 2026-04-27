@@ -42,6 +42,7 @@ class RefineRequest(BaseModel):
     filled_specs: Dict[str, Any] = Field(default_factory=dict)
     isq_specs: List[str] = Field(default_factory=list)
     free_text_specs: List[str] = Field(default_factory=list)
+    quantity: Optional[int] = 0
 
 
 # --- Routes ----------------------------------------------------------------
@@ -76,7 +77,10 @@ async def refine_questions(req: RefineRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
 
-    prompt = f"""You are an IndiaMART B2B procurement AI helping buyers specify requirements.
+    qty = req.quantity or 0
+    business_signal = "HIGH" if qty >= 50 else ("MEDIUM" if qty >= 10 else "LOW")
+
+    prompt = f"""You are an IndiaMART B2B procurement system helping buyers specify requirements.
 
 INPUT:
 PRODUCT NAME: "{req.product_name}"
@@ -84,43 +88,34 @@ BUYER NOTES: "{req.additional_notes or ''}"
 FILLED SPECS: {json.dumps(req.filled_specs)}
 ISQ SPECS: {json.dumps(req.isq_specs)}
 FREE-TEXT SPECS: {json.dumps(req.free_text_specs)}
+QUANTITY: {qty} (business signal: {business_signal})
 
-STEP 1 — EXTRACT KNOWN SPECS
-Extract only values explicitly present in the product name or filled filters.
-No inference. No assumptions. Keys must match ISQ spec names exactly. Max 3 specs.
-Example: "6-seater wooden dining table" → {{"Seating Capacity": "6 Seater", "Primary Material": "Wood"}}
+STEP 1 — EXTRACT KNOWN SPECS (no inference, max 3).
 
-STEP 2 — CLASSIFY ISQ SPECS
-For each ISQ spec mark as:
-- REDUNDANT → already extracted in Step 1
-- RELEVANT → otherwise (default)
+STEP 2 — SUGGEST PRODUCT SPECS (max 4)
+Important product specs NOT already in FILLED SPECS or ISQ SPECS.
+Rules: chip-style with 5-10 real Indian B2B values, no Yes/No specs, no trivial specs.
+Focus on specs that genuinely help shortlist the right seller (delivery timeline, MOQ, after-sales support, warranty, certification, finish/grade etc — choose what matters most for THIS product).
 
-STEP 3 — HINTS & OPTIONS
-For each RELEVANT spec:
-- isqHints: 2-4 word hint or null
-- isqOptions: up to 10 realistic Indian B2B market values. Required for all free-text specs. No "Other (Specify)".
-
-STEP 4 — DEPENDENCIES
-Only add spec dependencies if high confidence. Else return {{}}.
-
-STEP 5 — SUGGEST MISSING SPECS (max 5)
-Suggest important specs NOT already in ISQ, Step 1 extraction, or filled specs.
-Rules:
-- Prefer chip-style specs with 5-10 real options
-- Use text input only if no meaningful options exist
-- Skip boolean Yes/No specs
-- Skip trivial specs (e.g., country of origin)
-- Prioritise specs relevant to Indian B2B sourcing decisions
+STEP 3 — SUGGEST PERSONA QUESTIONS (max 3)
+Probe the BUYER PROFILE so the seller can quote accurately. ONLY include if business_signal is MEDIUM or HIGH OR the product is a B2B / capital-goods item.
+Examples:
+- Industry / Sector (chip with realistic Indian sectors)
+- Company Size / Employee Count (chip)
+- Buyer Role (chip: Owner, Procurement Manager, Engineer, Reseller, …)
+- End-Use / Project Type
+- Company Name (text, only if signal=HIGH)
+- Procurement Frequency (chip: One-time, Monthly, Quarterly, Annual)
+Skip persona Qs entirely if signal=LOW and product is consumer-grade.
 
 Return JSON ONLY in this exact shape (no markdown, no preamble):
 {{
   "extracted": {{ "<spec>": "<value>" }},
-  "isq_classified": [
-    {{"name": "<spec>", "status": "RELEVANT|REDUNDANT", "hint": "<2-4 words or null>", "options": ["..."], "type": "chip|text"}}
-  ],
-  "dependencies": {{}},
   "suggested": [
     {{"name": "<spec>", "hint": "<2-4 words>", "options": ["..."], "type": "chip|text"}}
+  ],
+  "persona": [
+    {{"name": "<question>", "hint": "<2-4 words>", "options": ["..."], "type": "chip|text"}}
   ]
 }}
 """
@@ -154,50 +149,56 @@ Return JSON ONLY in this exact shape (no markdown, no preamble):
 def _fallback_questions(req: RefineRequest) -> Dict[str, Any]:
     """Deterministic keyword-based fallback so UI never breaks."""
     p = req.product_name.lower()
-    suggested = []
+    qty = req.quantity or 0
     if any(k in p for k in ["generator", "diesel"]):
         suggested = [
             {"name": "Power Rating", "hint": "kVA range", "options": ["25 kVA", "62.5 kVA", "100 kVA", "125 kVA", "200 kVA", "320 kVA"], "type": "chip"},
-            {"name": "Cooling Type", "hint": "air/water", "options": ["Air Cooled", "Water Cooled"], "type": "chip"},
-            {"name": "Application", "hint": "usage", "options": ["Industrial", "Commercial", "Residential", "Construction", "Telecom"], "type": "chip"},
+            {"name": "Application", "hint": "use case", "options": ["Industrial", "Commercial", "Residential", "Construction", "Telecom"], "type": "chip"},
             {"name": "Warranty", "hint": "years", "options": ["1 Year", "2 Years", "3 Years", "5 Years"], "type": "chip"},
+            {"name": "Delivery Timeline", "hint": "lead time", "options": ["Within 1 Week", "2-3 Weeks", "1 Month", "Flexible"], "type": "chip"},
         ]
     elif any(k in p for k in ["helmet", "safety", "ppe"]):
         suggested = [
             {"name": "Certification", "hint": "standard", "options": ["IS 2925", "CE", "ANSI Z89.1", "ISO 3873"], "type": "chip"},
-            {"name": "Color", "hint": "shade", "options": ["White", "Yellow", "Red", "Blue", "Orange", "Green"], "type": "chip"},
-            {"name": "Strap Type", "hint": "chin strap", "options": ["Ratchet", "Pin-lock", "Elastic"], "type": "chip"},
-            {"name": "MOQ", "hint": "min order", "options": ["50 Pieces", "100 Pieces", "500 Pieces", "1000 Pieces"], "type": "chip"},
+            {"name": "Color", "hint": "shade", "options": ["White", "Yellow", "Red", "Blue", "Orange"], "type": "chip"},
+            {"name": "MOQ", "hint": "min order", "options": ["50 Pcs", "100 Pcs", "500 Pcs", "1000 Pcs"], "type": "chip"},
+            {"name": "Branding", "hint": "logo print", "options": ["Plain", "Logo Required", "Custom Print"], "type": "chip"},
         ]
     elif any(k in p for k in ["tile", "tiles", "wall", "floor"]):
         suggested = [
             {"name": "Size", "hint": "dimensions", "options": ["300x300 mm", "600x600 mm", "800x800 mm", "1200x600 mm"], "type": "chip"},
             {"name": "Finish", "hint": "surface", "options": ["Matte", "Glossy", "Satin", "Polished"], "type": "chip"},
-            {"name": "Thickness", "hint": "in mm", "options": ["8 mm", "10 mm", "12 mm", "15 mm"], "type": "chip"},
             {"name": "Application Area", "hint": "where used", "options": ["Bathroom", "Kitchen", "Living Room", "Outdoor"], "type": "chip"},
+            {"name": "Project Stage", "hint": "timeline", "options": ["Quoting", "Within 2 Weeks", "Within 1 Month", "Exploring"], "type": "chip"},
         ]
     elif any(k in p for k in ["conveyor", "belt"]):
         suggested = [
-            {"name": "Width", "hint": "belt width", "options": ["400 mm", "600 mm", "800 mm", "1000 mm", "1200 mm"], "type": "chip"},
-            {"name": "Belt Type", "hint": "belt style", "options": ["Flat", "Modular", "Roller", "Cleated"], "type": "chip"},
-            {"name": "Load Capacity", "hint": "kg/hr", "options": ["Up to 500 kg/hr", "500-2000 kg/hr", "2000+ kg/hr"], "type": "chip"},
+            {"name": "Width", "hint": "belt width", "options": ["400 mm", "600 mm", "800 mm", "1000 mm"], "type": "chip"},
+            {"name": "Belt Type", "hint": "style", "options": ["Flat", "Modular", "Roller", "Cleated"], "type": "chip"},
+            {"name": "Load Capacity", "hint": "kg/hr", "options": ["<500", "500-2000", "2000+"], "type": "chip"},
         ]
     else:
         suggested = [
-            {"name": "Quality Grade", "hint": "quality tier", "options": ["Premium", "Standard", "Economy"], "type": "chip"},
+            {"name": "Quality Grade", "hint": "tier", "options": ["Premium", "Standard", "Economy"], "type": "chip"},
             {"name": "Delivery Timeline", "hint": "lead time", "options": ["Within 1 Week", "1-2 Weeks", "2-4 Weeks", "1+ Month"], "type": "chip"},
-            {"name": "MOQ", "hint": "min order qty", "options": ["10 Units", "50 Units", "100 Units", "500 Units"], "type": "chip"},
-            {"name": "Payment Terms", "hint": "payment mode", "options": ["Advance", "30 Days Credit", "LC", "Against Delivery"], "type": "chip"},
+            {"name": "MOQ", "hint": "min order", "options": ["10", "50", "100", "500"], "type": "chip"},
+            {"name": "Payment Terms", "hint": "mode", "options": ["Advance", "30 Day Credit", "LC", "On Delivery"], "type": "chip"},
         ]
+
+    persona = []
+    if qty >= 10 or any(k in p for k in ["generator", "conveyor", "belt", "tiles", "compressor", "pump", "industrial"]):
+        persona = [
+            {"name": "Industry", "hint": "your sector", "options": ["Manufacturing", "Construction", "Healthcare", "IT/ITES", "Hospitality", "Retail", "Logistics"], "type": "chip"},
+            {"name": "Company Size", "hint": "employees", "options": ["<10", "10-50", "50-200", "200-1000", "1000+"], "type": "chip"},
+            {"name": "Your Role", "hint": "designation", "options": ["Owner", "Procurement Manager", "Engineer", "Purchase Executive", "Reseller"], "type": "chip"},
+        ]
+        if qty >= 50:
+            persona.append({"name": "Company Name", "hint": "for invoice", "options": [], "type": "text"})
 
     return {
         "extracted": {},
-        "isq_classified": [
-            {"name": s, "status": "RELEVANT", "hint": None, "options": [], "type": "chip"}
-            for s in req.isq_specs
-        ],
-        "dependencies": {},
         "suggested": suggested,
+        "persona": persona,
     }
 
 
