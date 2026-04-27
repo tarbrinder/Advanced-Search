@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { X, Star, CheckCircle2, Heart, Search as SearchIcon } from "lucide-react";
+import { X, Star, CheckCircle2, Heart, Search as SearchIcon, Plus } from "lucide-react";
 import { searchSellers } from "../data/mockData";
 import AILoading from "./search/AILoading";
 import TopPickCard from "./search/TopPickCard";
@@ -129,6 +129,7 @@ export default function SearchModal({ open, query, onClose }) {
   };
 
   // Build the chip filters for the top bar (results phase)
+  // Includes both panel filters AND refinement answers from the assistant.
   const topChips = useMemo(() => {
     const list = [];
     if (qty) list.push({ key: "Quantity", value: `${qty} ${unit}`, onRemove: () => setQty("") });
@@ -144,9 +145,17 @@ export default function SearchModal({ open, query, onClose }) {
     selectedCerts.forEach((c) =>
       list.push({ key: "Cert", value: c, onRemove: () => toggleArr(selectedCerts, setSelectedCerts, c) })
     );
+    // Refinement answers (skip ones already covered by productSpecs)
+    Object.entries(assistantAnswers).forEach(([k, v]) => {
+      if (v && !productSpecs[k]) {
+        list.push({ key: k, value: v, onRemove: () => handleAssistantAnswer(k, null) });
+      }
+    });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qty, unit, productSpecs, selectedMaterials, selectedBrands, selectedCerts]);
+  }, [qty, unit, productSpecs, selectedMaterials, selectedBrands, selectedCerts, assistantAnswers]);
+
+  const totalFiltersCount = topChips.length;
 
   if (!open) return null;
   const materialsVisible = showAllMaterials ? MATERIALS_ALL : MATERIALS_ALL.slice(0, 5);
@@ -219,6 +228,8 @@ export default function SearchModal({ open, query, onClose }) {
             onAnswer={handleAssistantAnswer}
             onRefine={() => handleFindBestMatch(2500)}
             otherCount={Math.max(0, ranked.length - 5)}
+            totalFiltersCount={totalFiltersCount}
+            onEditFilters={() => setPhase("filters")}
           />
         )}
       </div>
@@ -394,7 +405,7 @@ function FiltersBody({
 }
 
 // ============ RESULTS BODY (Phase 3) ============
-function ResultsBody({ shimmer, topChips, topPicks, query, qtyVal, specs, productSpecs, answers, onAnswer, onRefine, otherCount }) {
+function ResultsBody({ shimmer, topChips, topPicks, query, qtyVal, specs, productSpecs, answers, onAnswer, onRefine, otherCount, totalFiltersCount, onEditFilters }) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-h-0 relative">
       {shimmer && (
@@ -427,6 +438,15 @@ function ResultsBody({ shimmer, topChips, topPicks, query, qtyVal, specs, produc
               </span>
             </button>
           ))}
+          <button
+            data-testid="edit-filters-btn"
+            onClick={onEditFilters}
+            className="ml-auto inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-dashed border-slate-300 text-slate-500 hover:text-[#0f1f5c] hover:border-[#0f1f5c] text-[11px] font-semibold transition-colors"
+            title="Go back to add or change filters"
+          >
+            <Plus size={11} strokeWidth={2.5} />
+            Edit filters
+          </button>
         </div>
       </div>
 
@@ -442,11 +462,11 @@ function ResultsBody({ shimmer, topChips, topPicks, query, qtyVal, specs, produc
           </button>
         </div>
         <div
-          className="grid grid-cols-5 gap-3 min-h-0 flex-1 overflow-hidden"
+          className="grid grid-cols-5 gap-3"
           data-testid="top-picks-grid"
         >
           {topPicks.map((s, i) => (
-            <TopPickCard key={s.name + i} seller={s} rank={i} showRibbon={i < 3} />
+            <TopPickCard key={s.name + i} seller={s} totalFilters={totalFiltersCount} />
           ))}
           {topPicks.length === 0 && (
             <div className="col-span-5 text-center text-[12px] text-slate-500 py-10">

@@ -30,6 +30,15 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
 
+## Completed (2026-04-27 · v4 — uniform cards + reapply filters)
+- [x] Removed all rank ribbons, emerald borders, and special highlighting on top picks — all 5 cards are visually identical
+- [x] Cards now show a 5-star visual rating (filled to integer rating) instead of a single star + number
+- [x] Card tag row is exactly 4 tags: GST, TrustSEAL, Pay-Protected (each active=colored / inactive=struck-through grey), Spec match X/N where N = total active filters
+- [x] Distance/km tag removed
+- [x] Refinement answers from the buyer assistant now show as chips in the top filters bar with × to deselect
+- [x] "+ Edit filters" affordance on the right of the chips bar — sends user back to the filter screen with all state preserved, lets them re-apply removed filters or add new ones
+- [x] Buyer-assistant header copy updated to "Help me find you a better match by asking these questions"
+
 ## Completed (2026-04-27 · v3 — clean conversion-focused flow)
 - [x] Removed every "AI" mention from UI (kept only as backend prompt context)
 - [x] Removed sparkle icon from "Find Best Match" CTA — plain dark-navy pill

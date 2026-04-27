@@ -1,5 +1,5 @@
-// Enrich sellers with AI metadata (spec match / distance / responsiveness)
-// so the Top-3 pick cards can render the required badge row and meta line.
+// Enrich sellers with metadata so the top-pick cards can render
+// the required tag row (TrustSEAL, Payment Protected, Spec match).
 
 function hashCode(s) {
   let h = 0;
@@ -9,17 +9,21 @@ function hashCode(s) {
 
 export function enrichSellers(sellers, answers = {}) {
   const answered = Object.values(answers).filter((v) => v != null && v !== "").length;
-  return sellers.map((s, i) => {
+  return sellers.map((s) => {
     const h = hashCode(s.name);
     const specMatch = Math.min(5, 3 + ((h + answered) % 3)); // 3..5
-    const distanceKm = 5 + (h % 40); // 5..45
-    const responsiveness = 70 + (h % 28); // 70..97
+    const distanceKm = 5 + (h % 40);
+    const responsiveness = 70 + (h % 28);
+    const trustSeal = s.trustSeal !== undefined ? s.trustSeal : (h % 5 !== 0); // ~80% trust
+    const paymentProtected = (h % 4 !== 0); // ~75% protected
     return {
       ...s,
+      trustSeal,
+      paymentProtected,
       specMatch,
       distanceKm,
       responsiveness,
-      aiScore: specMatch * 20 + responsiveness - distanceKm * 0.5,
+      aiScore: specMatch * 25 + responsiveness * 0.6 + (trustSeal ? 8 : 0) + (paymentProtected ? 5 : 0),
     };
   });
 }

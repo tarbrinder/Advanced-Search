@@ -102,7 +102,6 @@ export default function BuyerAssistant({
       </div>
     );
   }
-
   const isText = cur.type === "text" || !cur.options || cur.options.length === 0;
 
   return (
@@ -110,16 +109,13 @@ export default function BuyerAssistant({
       data-testid="buyer-assistant"
       className="rounded-[12px] border border-[#6d28d9]/25 bg-gradient-to-r from-[#6d28d9]/6 via-white to-[#0f1f5c]/5 px-4 py-3"
     >
-      <div className="flex items-center gap-3 mb-2">
-        <span className="text-[10.5px] font-semibold text-[#6d28d9] tracking-wide uppercase">
-          Refine · {active + 1}/{total}
+      <div className="flex items-center gap-3 mb-1.5">
+        <span className="text-[11.5px] font-semibold text-[#0f1f5c]">
+          Help me find you a better match by asking these questions
         </span>
-        <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-[#6d28d9] transition-all duration-300"
-            style={{ width: `${((active + 1) / total) * 100}%` }}
-          />
-        </div>
+        <span className="text-[10.5px] font-semibold text-[#6d28d9] uppercase tracking-wide ml-auto">
+          {active + 1}/{total}
+        </span>
         <button
           data-testid={`skip-${cur.name}`}
           onClick={skip}
@@ -127,6 +123,12 @@ export default function BuyerAssistant({
         >
           <SkipForward size={11} /> Skip
         </button>
+      </div>
+      <div className="h-1 bg-slate-100 rounded-full overflow-hidden mb-2.5">
+        <div
+          className="h-full bg-[#6d28d9] transition-all duration-300"
+          style={{ width: `${((active + 1) / total) * 100}%` }}
+        />
       </div>
 
       <div className="flex items-center gap-3 flex-wrap" data-testid={`question-${cur.name}`}>
