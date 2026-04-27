@@ -30,6 +30,13 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
 
+## Completed (2026-04-27 · v5 — multi-question assistant)
+- [x] Buyer-assistant header copy: "Answer these questions to help me serve you better"
+- [x] Bottom strip now shows up to 3 questions side-by-side in a 3-column grid; no Skip option per question
+- [x] Single "Next →" button advances to the next batch; on last batch the label becomes "Refine →" and triggers a re-search
+- [x] Free-text questions are filtered out at the assistant level so the layout stays uniform
+- [x] Selecting any chip continues to sync into the top filters bar and triggers the shimmer refresh
+
 ## Completed (2026-04-27 · v4 — uniform cards + reapply filters)
 - [x] Removed all rank ribbons, emerald borders, and special highlighting on top picks — all 5 cards are visually identical
 - [x] Cards now show a 5-star visual rating (filled to integer rating) instead of a single star + number
