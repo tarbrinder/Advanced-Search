@@ -4,6 +4,7 @@ import { searchSellers } from "../data/mockData";
 import AILoading from "./search/AILoading";
 import TopPickCard from "./search/TopPickCard";
 import BuyerAssistant from "./search/BuyerAssistant";
+import LocationPicker from "./search/LocationPicker";
 import { rankSellers } from "./search/rankSellers";
 
 const UNITS = ["Meter", "kg", "Piece"];
@@ -48,7 +49,7 @@ function getProductSpecs(q) {
   ];
 }
 
-export default function SearchModal({ open, query, onClose }) {
+export default function SearchModal({ open, query, location, setLocation, onClose }) {
   const [phase, setPhase] = useState("filters"); // filters | loading | results
   const [loadingMs, setLoadingMs] = useState(5500);
 
@@ -171,42 +172,38 @@ export default function SearchModal({ open, query, onClose }) {
         className="bg-white w-full max-w-[1180px] h-[88vh] rounded-[16px] shadow-2xl flex flex-col overflow-hidden"
         style={{ animation: "fadeIn 0.18s ease-out" }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <SearchIcon size={16} className="text-[#0f1f5c]" />
-            <span data-testid="search-modal-query" className="text-[#0a6640] font-bold text-[16px] tracking-tight">
+        {/* Header — single smart row: query + location + selected chips + edit-filters + close.
+            Empty space in the original header is now used for chips and location picker. */}
+        <div className="flex items-center gap-3 px-5 py-2.5 border-b border-slate-100 shrink-0">
+          {/* Query */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <SearchIcon size={15} className="text-[#0f1f5c]" />
+            <span data-testid="search-modal-query" className="text-[#0a6640] font-bold text-[15px] tracking-tight">
               {query}
             </span>
           </div>
-          <button
-            data-testid="search-modal-close"
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600"
-          >
-            <X size={20} />
-          </button>
-        </div>
 
-        {/* Top chips bar — sits in top space of modal; visible in filters phase
-            (when ≥1 chip selected) and always in results phase. Does NOT
-            reduce the seller-card area beyond a slim 38px strip. */}
-        {phase !== "loading" && (topChips.length > 0 || phase === "results") && (
-          <div
-            data-testid="top-chips-bar"
-            className="flex items-center gap-2 px-5 py-2 border-b border-slate-100 bg-white shrink-0 overflow-x-auto"
-            style={{ scrollbarWidth: "none" }}
-          >
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide shrink-0">Filters</span>
-            {topChips.length === 0 ? (
-              <span className="text-[11px] text-slate-400 shrink-0">None applied</span>
-            ) : (
-              topChips.map((chip, i) => (
+          {/* Location picker */}
+          {setLocation && (
+            <LocationPicker value={location || "Dharamsala"} onChange={setLocation} />
+          )}
+
+          {/* Inline selected-filter chips (scroll horizontally if many) */}
+          {phase !== "loading" && (topChips.length > 0 || phase === "results") && (
+            <div
+              data-testid="top-chips-bar"
+              className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide"
+              style={{ scrollbarWidth: "none" }}
+            >
+              {topChips.length === 0 && phase === "results" && (
+                <span className="text-[11px] text-slate-400 shrink-0">No filters applied</span>
+              )}
+              {topChips.map((chip, i) => (
                 <button
                   key={`${chip.key}-${chip.value}-${i}`}
                   data-testid={`chip-${chip.key}-${chip.value}`}
                   onClick={chip.onRemove}
-                  className="group inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-medium hover:bg-teal-100 transition-colors shrink-0"
+                  className="group inline-flex items-center gap-1 h-7 pl-2 pr-1 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-medium hover:bg-teal-100 transition-colors shrink-0"
                 >
                   <span className="text-teal-600/80 text-[10px]">{chip.key}:</span>
                   <span className="font-semibold">{chip.value}</span>
@@ -214,21 +211,34 @@ export default function SearchModal({ open, query, onClose }) {
                     <X size={10} strokeWidth={2.5} />
                   </span>
                 </button>
-              ))
-            )}
-            {phase === "results" && (
-              <button
-                data-testid="edit-filters-btn"
-                onClick={() => setPhase("filters")}
-                className="ml-auto inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-dashed border-slate-300 text-slate-500 hover:text-[#0f1f5c] hover:border-[#0f1f5c] text-[11px] font-semibold transition-colors shrink-0"
-                title="Go back to add or change filters"
-              >
-                <Plus size={11} strokeWidth={2.5} />
-                Edit filters
-              </button>
-            )}
-          </div>
-        )}
+              ))}
+              {phase === "results" && (
+                <button
+                  data-testid="edit-filters-btn"
+                  onClick={() => setPhase("filters")}
+                  className="inline-flex items-center gap-1 h-7 px-2 rounded-full border border-dashed border-slate-300 text-slate-500 hover:text-[#0f1f5c] hover:border-[#0f1f5c] text-[11px] font-semibold transition-colors shrink-0"
+                  title="Go back to add or change filters"
+                >
+                  <Plus size={11} strokeWidth={2.5} />
+                  Edit filters
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Spacer when no chips so close button still goes to far right */}
+          {(phase === "loading" || (phase === "filters" && topChips.length === 0)) && (
+            <div className="flex-1" />
+          )}
+
+          <button
+            data-testid="search-modal-close"
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-600 shrink-0"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
         {/* Body — different layout per phase */}
         {phase !== "results" ? (

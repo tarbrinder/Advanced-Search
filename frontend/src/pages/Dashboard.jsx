@@ -94,7 +94,7 @@ export default function Dashboard() {
         </main>
       </div>
 
-      <SearchModal open={modalOpen} query={searchTerm} onClose={() => setModalOpen(false)} />
+      <SearchModal open={modalOpen} query={searchTerm} location={location} setLocation={setLocation} onClose={() => setModalOpen(false)} />
 
       {/* Floating help button */}
       <button
