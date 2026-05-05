@@ -254,21 +254,25 @@ function FiltersBody({
   sellers, query, favorites, toggleFav,
   onFindBestMatch,
 }) {
+  // Dedupe: hide generic Material section if a product spec is already called "Material"
+  const hasMaterialSpec = specs.some((s) => s.name.toLowerCase() === "material");
+
   return (
-    <div className="flex-1 grid grid-cols-[280px_1fr] overflow-hidden min-h-0">
+    <div className="flex-1 grid grid-cols-[260px_1fr] overflow-hidden min-h-0">
       {/* LEFT FILTER PANEL */}
       <aside className="border-r border-slate-100 bg-[#f8fafc] flex flex-col overflow-hidden min-h-0" data-testid="filters-panel">
-        <div className="flex-1 overflow-y-auto p-5 pb-4 space-y-5 min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 pt-3 pb-2 space-y-3 min-h-0">
+          {/* Quantity */}
           <div>
-            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Quantity</div>
-            <div className="flex items-center gap-2">
+            <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Quantity</div>
+            <div className="flex items-center gap-1.5">
               <input
                 data-testid="qty-input"
                 type="number"
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
                 placeholder="0"
-                className="w-16 h-8 px-2 text-sm rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1f5c]/30 focus:border-[#0f1f5c]"
+                className="w-14 h-7 px-2 text-[12px] rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1f5c]/30 focus:border-[#0f1f5c]"
               />
               <div className="flex rounded-md border border-slate-200 overflow-hidden bg-white">
                 {UNITS.map((u) => (
@@ -276,7 +280,7 @@ function FiltersBody({
                     key={u}
                     data-testid={`unit-${u}`}
                     onClick={() => setUnit(u)}
-                    className={`px-2.5 h-8 text-[11px] font-medium transition-colors ${
+                    className={`px-2 h-7 text-[10.5px] font-medium transition-colors ${
                       unit === u ? "bg-teal-500 text-white" : "text-slate-600 hover:bg-slate-50"
                     }`}
                   >
@@ -287,10 +291,11 @@ function FiltersBody({
             </div>
           </div>
 
+          {/* Product-specific specs */}
           {specs.map((spec) => (
             <div key={spec.name} data-testid={`spec-filter-${spec.name}`}>
-              <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">{spec.name}</div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">{spec.name}</div>
+              <div className="flex flex-wrap gap-1">
                 {spec.options.map((opt) => {
                   const selected = productSpecs[spec.name] === opt;
                   return (
@@ -298,7 +303,7 @@ function FiltersBody({
                       key={opt}
                       data-testid={`spec-chip-${spec.name}-${opt}`}
                       onClick={() => handleSpecChipChange(spec.name, selected ? null : opt)}
-                      className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                      className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
                         selected
                           ? "bg-teal-500 border-teal-500 text-white font-semibold"
                           : "border-slate-200 text-slate-600 hover:border-teal-400 bg-white"
@@ -312,41 +317,45 @@ function FiltersBody({
             </div>
           ))}
 
-          <div>
-            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Material</div>
-            <div className="flex flex-wrap gap-1.5">
-              {materialsVisible.map((m) => (
+          {/* Generic Material — only if not already shown as product spec */}
+          {!hasMaterialSpec && (
+            <div>
+              <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Material</div>
+              <div className="flex flex-wrap gap-1">
+                {materialsVisible.map((m) => (
+                  <button
+                    key={m}
+                    data-testid={`material-${m}`}
+                    onClick={() => toggleArr(selectedMaterials, setSelectedMaterials, m)}
+                    className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
+                      selectedMaterials.includes(m)
+                        ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
+                        : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
                 <button
-                  key={m}
-                  data-testid={`material-${m}`}
-                  onClick={() => toggleArr(selectedMaterials, setSelectedMaterials, m)}
-                  className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
-                    selectedMaterials.includes(m)
-                      ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
-                      : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
-                  }`}
+                  onClick={() => setShowAllMaterials((s) => !s)}
+                  className="px-2 h-6 text-[10.5px] text-teal-600 font-semibold hover:underline"
                 >
-                  {m}
+                  {showAllMaterials ? "Less ↑" : "More ↓"}
                 </button>
-              ))}
+              </div>
             </div>
-            <button
-              onClick={() => setShowAllMaterials((s) => !s)}
-              className="mt-1.5 text-[11px] text-teal-600 font-semibold hover:underline"
-            >
-              {showAllMaterials ? "Show Less ↑" : "Show More ↓"}
-            </button>
-          </div>
+          )}
 
+          {/* Brand */}
           <div>
-            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Brand</div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Brand</div>
+            <div className="flex flex-wrap gap-1">
               {BRANDS.map((b) => (
                 <button
                   key={b}
                   data-testid={`brand-${b}`}
                   onClick={() => toggleArr(selectedBrands, setSelectedBrands, b)}
-                  className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                  className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
                     selectedBrands.includes(b)
                       ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
                       : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
@@ -358,15 +367,16 @@ function FiltersBody({
             </div>
           </div>
 
+          {/* Certification */}
           <div>
-            <div className="text-[10.5px] font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">Certification</div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Certification</div>
+            <div className="flex flex-wrap gap-1">
               {CERTS.map((c) => (
                 <button
                   key={c}
                   data-testid={`cert-${c}`}
                   onClick={() => toggleArr(selectedCerts, setSelectedCerts, c)}
-                  className={`px-2.5 py-1 text-[11px] rounded-md border transition-colors ${
+                  className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
                     selectedCerts.includes(c)
                       ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
                       : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
@@ -379,12 +389,12 @@ function FiltersBody({
           </div>
         </div>
 
-        <div className="p-4 border-t border-slate-200 bg-white shrink-0">
+        <div className="px-3 py-3 border-t border-slate-200 bg-white shrink-0">
           <button
             data-testid="find-best-match"
             onClick={onFindBestMatch}
             disabled={phase === "loading"}
-            className="w-full h-11 rounded-[10px] bg-[#0f1f5c] hover:bg-[#172d80] active:bg-[#0a1748] disabled:opacity-60 text-white text-[13px] font-bold transition-all shadow-sm"
+            className="w-full h-10 rounded-[10px] bg-[#0f1f5c] hover:bg-[#172d80] active:bg-[#0a1748] disabled:opacity-60 text-white text-[12.5px] font-bold transition-all shadow-sm"
           >
             Find Best Match
           </button>
