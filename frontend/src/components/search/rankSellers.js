@@ -16,6 +16,7 @@ export function enrichSellers(sellers, answers = {}) {
     const responsiveness = 70 + (h % 28);
     const trustSeal = s.trustSeal !== undefined ? s.trustSeal : (h % 5 !== 0); // ~80% trust
     const paymentProtected = (h % 4 !== 0); // ~75% protected
+    const yearsExp = 3 + (h % 13); // 3..15 yrs
     // Generate a stable Indian mobile number per seller
     const last7 = (h % 9000000) + 1000000;
     const prefix = ["98", "97", "96", "99", "70", "82", "85"][h % 7];
@@ -26,6 +27,7 @@ export function enrichSellers(sellers, answers = {}) {
       trustSeal,
       paymentProtected,
       phone,
+      yearsExp,
       specMatch,
       distanceKm,
       responsiveness,
