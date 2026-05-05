@@ -10,6 +10,7 @@ import LocationPicker from "../components/search/LocationPicker";
 import SellerCard from "../components/search/SellerCard";
 import AILoading from "../components/search/AILoading";
 import BuyerAssistant from "../components/search/BuyerAssistant";
+import CollapsibleSidebar from "../components/search/CollapsibleSidebar";
 import { searchSellers } from "../data/mockData";
 import { rankSellers } from "../components/search/rankSellers";
 
@@ -26,7 +27,7 @@ const TRUST_FILTERS = [
   { id: "yr1", label: "1+ Year", icon: CheckCircle2 },
   { id: "turnover", label: "₹5cr+ Turnover", icon: IndianRupee },
   { id: "gst3", label: "GST 3+ Years", icon: CheckCircle2 },
-  { id: "pay", label: "Payment Protected", icon: ShieldCheck },
+  { id: "pay", label: "Payment Protected", icon: ShieldCheck, comingSoon: true },
 ];
 
 const BUSINESS_TYPES = [
@@ -112,9 +113,9 @@ export default function SearchPage() {
   // Mobile filter drawer
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
-  // Collapsible filter sections
+  // Collapsible filter sections — order matters: Specs first, then Trust, then Business Type
   const [openSections, setOpenSections] = useState({
-    biz: true, trust: true, specs: true, qty: true, mat: true, brand: true, cert: true,
+    specs: true, trust: true, biz: true, qty: true, mat: true, brand: true, cert: true,
   });
 
   const specs = useMemo(() => getProductSpecs(query), [query]);
@@ -195,7 +196,7 @@ export default function SearchPage() {
   const onHeaderSearch = (q) => { if (q) nav(`/search?q=${encodeURIComponent(q)}&loc=${encodeURIComponent(location)}`); };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* IndiaMART top header (re-used) */}
       <Header
         location={location}
@@ -206,8 +207,8 @@ export default function SearchPage() {
       />
 
       {/* Sub-header — query + location + Local only + count */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="px-3 md:px-6 py-3 flex items-center gap-3 flex-wrap">
+      <div className="bg-white border-b border-slate-200 shrink-0">
+        <div className="px-3 md:px-6 py-2 flex items-center gap-3 flex-wrap">
           <button
             data-testid="back-btn"
             onClick={() => nav(-1)}
@@ -219,7 +220,7 @@ export default function SearchPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#6d28d9] bg-[#6d28d9]/10 px-2 py-0.5 rounded">
               Product Search
             </span>
-            <h1 data-testid="search-page-query" className="text-[16px] md:text-[18px] font-bold text-[#0a6640] tracking-tight">
+            <h1 data-testid="search-page-query" className="text-[15px] md:text-[16px] font-bold text-[#0a6640] tracking-tight">
               {query}
             </h1>
           </div>
@@ -245,9 +246,12 @@ export default function SearchPage() {
         </div>
       </div>
 
-      {/* Main body */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Left filter panel */}
+      {/* Main body — fully fixed height, no page scroll */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Slim collapsible left nav (icons only) */}
+        <CollapsibleSidebar active="dashboard" onNavigate={(href) => nav(href)} />
+
+        {/* Filter panel (sticky) */}
         <FilterPanel
           mobileOpen={mobileFiltersOpen}
           onMobileClose={() => setMobileFiltersOpen(false)}
@@ -269,13 +273,13 @@ export default function SearchPage() {
           phase={phase}
         />
 
-        {/* Right content */}
-        <main className="flex-1 min-w-0 px-3 md:px-5 py-3 flex flex-col">
+        {/* Right content — flex column, internal regions sized so no page scroll */}
+        <main className="flex-1 min-w-0 px-3 md:px-4 py-2.5 flex flex-col overflow-hidden">
           {/* Mobile filter trigger */}
           <button
             data-testid="open-mobile-filters"
             onClick={() => setMobileFiltersOpen(true)}
-            className="lg:hidden mb-3 inline-flex items-center gap-1.5 self-start px-3 h-9 rounded-md border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 hover:border-teal-400"
+            className="lg:hidden mb-2 inline-flex items-center gap-1.5 self-start px-3 h-8 rounded-md border border-slate-200 bg-white text-[12px] font-semibold text-slate-700 hover:border-teal-400"
           >
             <SlidersHorizontal size={14} /> Filters
             {totalFiltersCount > 0 && (
@@ -285,7 +289,7 @@ export default function SearchPage() {
 
           {/* Selected chips bar */}
           {topChips.length > 0 && (
-            <div data-testid="top-chips-bar" className="mb-3 flex items-center gap-1.5 flex-wrap">
+            <div data-testid="top-chips-bar" className="mb-2 flex items-center gap-1.5 flex-wrap shrink-0">
               <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide shrink-0">Filters:</span>
               {topChips.map((chip, i) => (
                 <button
@@ -306,12 +310,12 @@ export default function SearchPage() {
 
           {/* Loading */}
           {phase === "loading" && (
-            <div className="flex-1 bg-white rounded-xl border border-slate-200 min-h-[400px] relative">
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 relative min-h-0">
               <AILoading durationMs={loadingMs} onDone={() => setPhase("results")} />
             </div>
           )}
 
-          {/* Filters phase / Results phase: seller grid */}
+          {/* Filters / Results: seller grid + view-more + assistant — all fit in viewport */}
           {phase !== "loading" && (
             <div className="flex-1 flex flex-col min-h-0 relative">
               {shimmer && (
@@ -323,18 +327,18 @@ export default function SearchPage() {
               )}
 
               {phase === "results" && (
-                <div className="mb-2 flex items-center gap-2">
+                <div className="mb-1.5 flex items-center gap-2 shrink-0">
                   <Sparkles size={14} className="text-amber-500" />
-                  <h3 className="text-[13px] font-bold text-[#0f1f5c]">Top picks for you</h3>
+                  <h3 className="text-[12.5px] font-bold text-[#0f1f5c]">Top picks for you</h3>
                 </div>
               )}
 
-              {/* 5 cols × 2 rows = 10 cards on desktop; responsive */}
+              {/* Sellers grid — flex-1 with min-h-0 so it fills available height */}
               <div
                 data-testid="sellers-grid"
-                className="grid gap-2.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 grid-rows-2 flex-1 min-h-0 overflow-hidden"
               >
-                {visibleSellers.map((s, i) => (
+                {visibleSellers.slice(0, 10).map((s, i) => (
                   <SellerCard
                     key={s.name + i}
                     seller={s}
@@ -354,22 +358,22 @@ export default function SearchPage() {
                 )}
               </div>
 
-              {/* View More CTA — smartly placed at bottom */}
+              {/* View More CTA — always within viewport, just below the grid */}
               {ranked.length > 10 && (
-                <div className="mt-3 flex items-center justify-center">
+                <div className="mt-2 flex items-center justify-center shrink-0">
                   <button
                     data-testid="view-more-sellers"
                     onClick={() => setShowMore((v) => !v)}
-                    className="h-9 px-5 rounded-md bg-white border border-slate-300 hover:border-[#0f1f5c] text-[12px] font-semibold text-slate-800 hover:text-[#0f1f5c] transition-colors"
+                    className="h-8 px-5 rounded-md bg-white border border-slate-300 hover:border-[#0f1f5c] text-[11.5px] font-semibold text-slate-800 hover:text-[#0f1f5c] transition-colors"
                   >
                     {showMore ? `Show less ↑` : `View ${ranked.length - 10} more sellers →`}
                   </button>
                 </div>
               )}
 
-              {/* Buyer assistant — appears in results phase */}
+              {/* Buyer assistant */}
               {phase === "results" && (
-                <div className="mt-3 shrink-0">
+                <div className="mt-2 shrink-0">
                   <BuyerAssistant
                     productName={query}
                     filledSpecs={productSpecs}
@@ -440,58 +444,7 @@ function FilterPanel(props) {
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-        {/* Business Type */}
-        <Section title="Business Type" icon={Factory} openKey="biz" openSections={openSections} setOpenSections={setOpenSections} count={selectedBiz.length}>
-          <div className="space-y-1.5 mt-1">
-            {BUSINESS_TYPES.map((b) => {
-              const Icon = b.icon;
-              const checked = selectedBiz.includes(b.id);
-              return (
-                <label
-                  key={b.id}
-                  data-testid={`biz-${b.id}`}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-1"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleArr(selectedBiz, setSelectedBiz, b.id)}
-                    className="w-3.5 h-3.5 accent-teal-500 cursor-pointer"
-                  />
-                  <Icon size={13} className="text-slate-500" />
-                  <span className="text-[12px] text-slate-700">{b.label}</span>
-                </label>
-              );
-            })}
-          </div>
-        </Section>
-
-        {/* Trust Filters */}
-        <Section title="Trust Filters" icon={ShieldCheck} openKey="trust" openSections={openSections} setOpenSections={setOpenSections} count={selectedTrust.length}>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {TRUST_FILTERS.map((t) => {
-              const Icon = t.icon;
-              const sel = selectedTrust.includes(t.id);
-              return (
-                <button
-                  key={t.id}
-                  data-testid={`trust-${t.id}`}
-                  onClick={() => toggleArr(selectedTrust, setSelectedTrust, t.id)}
-                  className={`inline-flex items-center gap-1 px-2 h-6 text-[10.5px] rounded-full border transition-colors ${
-                    sel
-                      ? "bg-[#0f1f5c] border-[#0f1f5c] text-white font-semibold"
-                      : "border-slate-200 text-slate-600 hover:border-[#0f1f5c] bg-white"
-                  }`}
-                >
-                  <Icon size={9.5} />
-                  {t.label}
-                </button>
-              );
-            })}
-          </div>
-        </Section>
-
-        {/* Specifications */}
+        {/* Specifications — first */}
         <Section title="Specifications" icon={SlidersHorizontal} openKey="specs" openSections={openSections} setOpenSections={setOpenSections}>
           {/* Quantity */}
           <div className="mb-2 mt-1">
@@ -617,6 +570,67 @@ function FilterPanel(props) {
             </div>
           </div>
         </Section>
+
+        {/* Trust Filters — second */}
+        <Section title="Trust Filters" icon={ShieldCheck} openKey="trust" openSections={openSections} setOpenSections={setOpenSections} count={selectedTrust.length}>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {TRUST_FILTERS.map((t) => {
+              const Icon = t.icon;
+              const sel = selectedTrust.includes(t.id);
+              const disabled = !!t.comingSoon;
+              return (
+                <button
+                  key={t.id}
+                  data-testid={`trust-${t.id}`}
+                  disabled={disabled}
+                  onClick={() => !disabled && toggleArr(selectedTrust, setSelectedTrust, t.id)}
+                  className={`relative inline-flex items-center gap-1 px-2 h-6 text-[10.5px] rounded-full border transition-colors ${
+                    disabled
+                      ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : sel
+                      ? "bg-[#0f1f5c] border-[#0f1f5c] text-white font-semibold"
+                      : "border-slate-200 text-slate-600 hover:border-[#0f1f5c] bg-white"
+                  }`}
+                  title={disabled ? "Coming soon" : t.label}
+                >
+                  <Icon size={9.5} />
+                  {t.label}
+                  {disabled && (
+                    <span className="ml-0.5 text-[8px] font-bold bg-amber-100 text-amber-700 px-1 rounded">
+                      Coming soon
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </Section>
+
+        {/* Business Type — third */}
+        <Section title="Business Type" icon={Factory} openKey="biz" openSections={openSections} setOpenSections={setOpenSections} count={selectedBiz.length}>
+          <div className="space-y-1.5 mt-1">
+            {BUSINESS_TYPES.map((b) => {
+              const Icon = b.icon;
+              const checked = selectedBiz.includes(b.id);
+              return (
+                <label
+                  key={b.id}
+                  data-testid={`biz-${b.id}`}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded px-1 py-1"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleArr(selectedBiz, setSelectedBiz, b.id)}
+                    className="w-3.5 h-3.5 accent-teal-500 cursor-pointer"
+                  />
+                  <Icon size={13} className="text-slate-500" />
+                  <span className="text-[12px] text-slate-700">{b.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </Section>
       </div>
       <div className="p-3 border-t border-slate-200 bg-white shrink-0">
         <button
@@ -633,8 +647,8 @@ function FilterPanel(props) {
 
   return (
     <>
-      {/* Desktop sticky panel */}
-      <aside className="hidden lg:flex w-[260px] shrink-0 border-r border-slate-200 bg-white flex-col h-[calc(100vh-130px)] sticky top-[64px]">
+      {/* Desktop sticky panel — height comes from parent flex container */}
+      <aside className="hidden lg:flex w-[240px] shrink-0 border-r border-slate-200 bg-white flex-col h-full">
         {Inner}
       </aside>
 

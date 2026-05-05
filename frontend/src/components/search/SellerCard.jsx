@@ -16,16 +16,17 @@ function StarRow({ rating = 0 }) {
   );
 }
 
-function Tag({ active, label, icon: Icon, activeClass, inactiveClass }) {
+function Tag({ active, label, icon: Icon, activeClass, inactiveClass, extra }) {
   return (
     <span
       className={`inline-flex items-center gap-0.5 text-[9.5px] font-semibold px-1.5 py-0.5 rounded ${
         active ? activeClass : inactiveClass
       }`}
-      title={label}
+      title={extra ? `${label} · ${extra}` : label}
     >
       {Icon && <Icon size={9} />}
       {label}
+      {extra && <span className="ml-0.5 text-[8px] font-bold opacity-80">· {extra}</span>}
     </span>
   );
 }
@@ -90,11 +91,12 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
             inactiveClass="text-slate-400 bg-slate-100 line-through"
           />
           <Tag
-            active={!!seller.paymentProtected}
+            active={false}
             label="Pay-Protected"
             icon={CheckCircle2}
             activeClass="text-[#0a6640] bg-[#0a6640]/10"
-            inactiveClass="text-slate-400 bg-slate-100 line-through"
+            inactiveClass="text-amber-700 bg-amber-50 border border-amber-200"
+            extra="Coming soon"
           />
           <span
             title={`${matched} of your ${matchOutOf} specs matched`}
