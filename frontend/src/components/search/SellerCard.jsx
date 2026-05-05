@@ -153,30 +153,45 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
           </span>
         </div>
 
-        {/* CTA row — compact Send icon + flex-1 Call button */}
+        {/* CTA row — proportions SWAP when phone is revealed
+            Default   :  [ Send Enquiry (flex-1) ]  [ 📞 (icon) ]
+            Revealed  :  [ 📤 (icon) ]              [ 📞 +91 XX XXX XXXXX (flex-1) ]
+            Sent      :  Send Enquiry icon → green ✓  */}
         <div className="flex gap-1 mt-1">
-          {/* Send Enquiry icon-only button (flips to ✓ on click) */}
+          {/* Send Enquiry — width animates between flex-1 and w-9 */}
           <button
             data-testid={`seller-enquiry-${seller.name}`}
             onClick={handleEnquiry}
             aria-label={sent ? "Enquiry sent" : "Send enquiry"}
             title={sent ? "Enquiry sent" : "Send enquiry"}
             disabled={sent}
-            className={`relative h-7 w-9 shrink-0 rounded-md flex items-center justify-center transition-all duration-300 ${
+            className={`relative h-7 shrink-0 rounded-md flex items-center justify-center gap-1 overflow-hidden transition-all duration-300 ease-out ${
+              showPhone ? "w-9" : "flex-1 px-2"
+            } ${
               sent
                 ? "bg-emerald-500 text-white cursor-default"
                 : "bg-teal-500 hover:bg-teal-600 text-white"
             }`}
           >
-            <span
-              key={sent ? "sent" : "send"}
-              className="inline-flex items-center justify-center animate-icon-flip"
-            >
-              {sent ? <Check size={14} strokeWidth={3} /> : <Send size={12} strokeWidth={2.5} />}
+            <span className="inline-flex items-center justify-center shrink-0">
+              {sent ? (
+                <Check size={14} strokeWidth={3} />
+              ) : (
+                <Send size={showPhone ? 12 : 11} strokeWidth={2.5} />
+              )}
             </span>
+            {/* Label only shows when not in minimized (phone-revealed) mode */}
+            {!showPhone && (
+              <span
+                key={sent ? "sent-label" : "enquiry-label"}
+                className="text-[11px] font-bold whitespace-nowrap animate-call-flip"
+              >
+                {sent ? "Sent" : "Send Enquiry"}
+              </span>
+            )}
           </button>
 
-          {/* Call button — flips in place between "Call" and phone number */}
+          {/* Call — width animates between w-9 (icon only) and flex-1 (full number) */}
           <button
             data-testid={`seller-call-${seller.name}`}
             onClick={(e) => {
@@ -186,25 +201,23 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
             aria-expanded={showPhone}
             aria-label={showPhone ? `Hide number ${phoneNumber}` : "Reveal phone number"}
             title={showPhone ? "Click to hide" : "Click to reveal number"}
-            className={`flex-1 min-w-0 h-7 px-1.5 rounded-md border font-bold transition-colors flex items-center justify-center gap-1 overflow-hidden ${
+            className={`h-7 shrink-0 rounded-md border font-bold transition-all duration-300 ease-out flex items-center justify-center gap-1 overflow-hidden ${
+              showPhone ? "flex-1 px-2 min-w-0" : "w-9"
+            } ${
               showPhone
                 ? "bg-[#0f1f5c] border-[#0f1f5c] text-white"
                 : "bg-white border-[#0f1f5c] text-[#0f1f5c] hover:bg-[#0f1f5c] hover:text-white"
             }`}
           >
-            <span
-              key={showPhone ? "phone" : "call"}
-              className="inline-flex items-center gap-1 min-w-0 animate-call-flip"
-            >
-              <Phone size={11} className="shrink-0" />
-              {showPhone ? (
-                <span className="tabular-nums tracking-tight text-[10.5px] truncate">
-                  {phoneNumber}
-                </span>
-              ) : (
-                <span className="text-[11px]">Call</span>
-              )}
-            </span>
+            <Phone size={showPhone ? 11 : 12} className="shrink-0" />
+            {showPhone && (
+              <span
+                key="phone-number"
+                className="tabular-nums tracking-tight text-[10.5px] truncate animate-call-flip"
+              >
+                {phoneNumber}
+              </span>
+            )}
           </button>
         </div>
       </div>

@@ -29,6 +29,12 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-05 · v8 — CTA proportions SWAP on Call click)
+- [x] Default CTA row: **Send Enquiry (wide, flex-1)** + **Call (small 36 px icon with phone icon)**
+- [x] On Call click: widths smoothly animate — **Send Enquiry shrinks to 36 px icon**, **Call expands to flex-1** and reveals the full phone number
+- [x] On Send Enquiry click (in either state): button flips to "✓ Sent" (emerald) and a bottom-center toast confirms "Enquiry sent to {seller}"
+- [x] Same component (`SellerCard.jsx`) is used for both **Search results grid** AND **Find Best Match "Top picks for you"** view — single update covers both flows
+
 ## Completed (2026-05-05 · v7 — SearchPage layout refactor + in-place CTA flip)
 - [x] **Layout refactor**: sub-header row (Back / PRODUCT SEARCH / query / Location / Local only / count) moved INSIDE `<main>` column. Left nav + Refine Results panel now extend all the way up to the navy header — frees vertical space for more filters.
 - [x] `CollapsibleSidebar`: removed the hard-coded `sticky top-[64px] h-[calc(100vh-64px)]` in favor of `h-full` so it fills the flex row cleanly.
