@@ -42,7 +42,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
   return (
     <div
       data-testid={`seller-card-${seller.name}`}
-      className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col min-h-0"
+      className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col self-start"
     >
       <div className="relative shrink-0">
         <img
@@ -64,8 +64,8 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
         )}
       </div>
 
-      <div className="px-2 pt-1.5 pb-2 flex flex-col gap-1 flex-1 min-h-0">
-        <div className="shrink-0">
+      <div className="px-2 pt-1.5 pb-2 flex flex-col gap-1">
+        <div>
           <div className="font-bold text-[11.5px] text-slate-900 truncate leading-tight">{seller.name}</div>
           <div className="text-[10px] text-slate-500 truncate flex items-center gap-0.5 leading-tight">
             <MapPin size={9} className="text-slate-400" />
@@ -75,7 +75,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
 
         <StarRow rating={seller.rating} />
 
-        <div className="flex items-center gap-1 flex-wrap shrink-0">
+        <div className="flex items-center gap-1 flex-wrap">
           <Tag
             active={!!seller.gst}
             label="GST"
@@ -107,7 +107,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
 
         <button
           data-testid={`seller-enquiry-${seller.name}`}
-          className="mt-auto w-full h-7 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-[11px] font-bold transition-colors shrink-0"
+          className="w-full h-7 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-[11px] font-bold transition-colors mt-1"
         >
           Send Enquiry
         </button>

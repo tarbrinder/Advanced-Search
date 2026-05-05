@@ -202,6 +202,7 @@ export default function SearchPage() {
         onSearch={onHeaderSearch}
         query={query}
         setQuery={() => {}}
+        hideSearch
       />
 
       {/* Sub-header — query + location + Local only + count */}
@@ -331,10 +332,14 @@ export default function SearchPage() {
                 </div>
               )}
 
-              {/* Sellers grid — fills available height with 2 rows of 5 */}
+              {/* Sellers grid — cards have NATURAL fixed height so they neither
+                  stretch (zoom-out) nor clip (zoom-in). If content exceeds the
+                  available area we allow internal scroll on this region while
+                  the page chrome stays put. */}
               <div
                 data-testid="sellers-grid"
-                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 grid-rows-2 flex-1 min-h-0 auto-rows-fr"
+                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 flex-1 min-h-0 overflow-y-auto auto-rows-min content-start scrollbar-hide"
+                style={{ scrollbarWidth: "none" }}
               >
                 {ranked.slice(0, 10).map((s, i) => (
                   <SellerCard

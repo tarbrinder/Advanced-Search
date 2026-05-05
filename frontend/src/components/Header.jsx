@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Search, MapPin, ChevronDown, Store, MessageCircle, HelpCircle, Globe, User } from "lucide-react";
 import { CITIES } from "../data/mockData";
 
-export default function Header({ location, setLocation, onSearch, query, setQuery, unreadMessages = 3 }) {
+export default function Header({ location, setLocation, onSearch, query, setQuery, unreadMessages = 3, hideSearch = false }) {
   const [locOpen, setLocOpen] = useState(false);
   const [locSearch, setLocSearch] = useState("");
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -48,6 +48,7 @@ export default function Header({ location, setLocation, onSearch, query, setQuer
         </div>
 
         {/* Location + Search + Actions */}
+        {!hideSearch && (
         <div className="flex-1 flex items-center gap-2 max-w-[900px]">
           {/* Location Dropdown */}
           <div className="relative" ref={locRef}>
@@ -139,6 +140,10 @@ export default function Header({ location, setLocation, onSearch, query, setQuer
             Post RFQ
           </button>
         </div>
+        )}
+
+        {/* When search is hidden, push right icons to the right */}
+        {hideSearch && <div className="flex-1" />}
 
         {/* Right icons */}
         <div className="hidden lg:flex items-center gap-5 text-[11px]" data-testid="header-right-icons">
