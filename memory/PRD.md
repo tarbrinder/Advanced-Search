@@ -29,6 +29,14 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-05 · v11 — card-sync edge cases + spec-match phase gating)
+- [x] **Name 2-line wrap supported**: `line-clamp-2` + `min-h: 26px` reservation — short and long names produce identical card height. Verified with seed "Bharat Heavy Electricals & Industrial Diesel Solutions Ltd" → 2 lines, same 210 px.
+- [x] **Reserved row heights** for Location (`min-h: 13px`) and Yrs/Reply (`min-h: 12px`) — cards remain perfectly synced even if a seller record is missing those fields.
+- [x] **Trust chip row reserved height** (`min-h: 16px`) so missing `gst` / `trustSeal` / `paymentProtected` flags render as muted line-through chips without changing total card height. Verified with seed "PowerLine Generators" (`gst: false`) and "Escorts Power Ltd" with synthetic missing flags.
+- [x] **Spec-match chip is now phase-gated**: hidden on the default Search page, visible only on the Find-Best-Match "Top picks for you" view. Implemented via `showSpecMatch={phase === "results"}` prop on `<SellerCard>`.
+- [x] **Resolution sweep verified by testing agent**: All checked viewports — 1920×1080, 1440×900, 1366×768, 1280×720, **1366×625 (laptop with bookmark bar)** — produce uniform 210 px cards, 88 px images, NO page scroll, NO grid scroll.
+- [x] Test-data seeds added: long-name & no-GST entries in `mockData.js` (diesel-generator inventory) for visual regression.
+
 ## Completed (2026-05-05 · v10 — card content compression, image untouched)
 - [x] **Image is now FIXED at 88 px** (`shrink-0 h-[88px]`) — never shrinks or crops further regardless of viewport zoom.
 - [x] Stars: `size 11 → 9`, rating text `10.5 → 9.5 px`.
