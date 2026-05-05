@@ -29,6 +29,13 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-05 · v9 — fully non-scrollable SearchPage at 100% zoom)
+- [x] **Page no longer scrolls at 100% zoom** on standard laptop viewports (1366×768, 1440×900, 1920×1080).
+- [x] Seller grid switched from `flex-1 + auto-rows-min + overflow-y-auto` (which used to scroll inside) to `shrink-0` with **CSS-Grid `minmax(150 px, 220 px)` row heights** — cards stay visually consistent across all viewport sizes, no internal scroll either.
+- [x] Row count is phase-aware: `1` row for Find Best Match results phase (5 cards), `2` rows for filters phase (10 cards).
+- [x] `SellerCard` content area uses `flex flex-col + mt-auto` on the CTA row so cards don't show empty padding at large viewports.
+- [x] Both `gridScrolls` and `pageScrolls` programmatically verified to be `false` after the change.
+
 ## Completed (2026-05-05 · v8 — CTA proportions SWAP on Call click)
 - [x] Default CTA row: **Send Enquiry (wide, flex-1)** + **Call (small 36 px icon with phone icon)**
 - [x] On Call click: widths smoothly animate — **Send Enquiry shrinks to 36 px icon**, **Call expands to flex-1** and reveals the full phone number

@@ -71,13 +71,13 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
   return (
     <div
       data-testid={`seller-card-${seller.name}`}
-      className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col self-start"
+      className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col min-h-0 h-full"
     >
-      <div className="relative shrink-0">
+      <div className="relative shrink-0 basis-[22%] min-h-[48px] max-h-[88px]">
         <img
           src={seller.image}
           alt={seller.name}
-          className="w-full h-20 object-cover"
+          className="w-full h-full object-cover"
           onError={(e) => { e.currentTarget.src = "https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=400"; }}
         />
         <div className="absolute top-1.5 left-1.5 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
@@ -93,7 +93,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
         )}
       </div>
 
-      <div className="px-2 pt-1.5 pb-2 flex flex-col gap-1">
+      <div className="px-2 pt-1.5 pb-2 flex flex-col gap-1 flex-1 min-h-0 overflow-hidden">
         <div>
           <div className="font-bold text-[11.5px] text-slate-900 truncate leading-tight">{seller.name}</div>
           <div className="text-[10px] text-slate-500 truncate flex items-center gap-0.5 leading-tight">
@@ -157,7 +157,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
             Default   :  [ Send Enquiry (flex-1) ]  [ 📞 (icon) ]
             Revealed  :  [ 📤 (icon) ]              [ 📞 +91 XX XXX XXXXX (flex-1) ]
             Sent      :  Send Enquiry icon → green ✓  */}
-        <div className="flex gap-1 mt-1">
+        <div className="flex gap-1 mt-auto pt-1">
           {/* Send Enquiry — width animates between flex-1 and w-9 */}
           <button
             data-testid={`seller-enquiry-${seller.name}`}

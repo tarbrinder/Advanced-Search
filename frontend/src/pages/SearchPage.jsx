@@ -345,14 +345,14 @@ export default function SearchPage() {
                 </div>
               )}
 
-              {/* Sellers grid — cards have NATURAL fixed height so they neither
-                  stretch (zoom-out) nor clip (zoom-in). If content exceeds the
-                  available area we allow internal scroll on this region while
-                  the page chrome stays put. */}
+              {/* Sellers grid — rows use minmax(160px, 220px) so cards stay
+                  visually consistent across screen sizes AND fit without scroll
+                  on small laptops (1366×768). Container itself is NOT flex-1
+                  so it doesn't stretch at large viewports. */}
               <div
                 data-testid="sellers-grid"
-                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 flex-1 min-h-0 overflow-y-auto auto-rows-min content-start scrollbar-hide"
-                style={{ scrollbarWidth: "none" }}
+                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 min-h-0 overflow-hidden shrink-0"
+                style={{ gridTemplateRows: phase === "results" ? "minmax(150px, 220px)" : "repeat(2, minmax(150px, 220px))" }}
               >
                 {ranked.slice(0, cardLimit).map((s, i) => (
                   <SellerCard
