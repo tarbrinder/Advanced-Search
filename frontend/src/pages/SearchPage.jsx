@@ -108,7 +108,6 @@ export default function SearchPage() {
   // Display
   const [favorites, setFavorites] = useState(new Set());
   const [shimmer, setShimmer] = useState(false);
-  const [showMore, setShowMore] = useState(false);
 
   // Mobile filter drawer
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -130,8 +129,7 @@ export default function SearchPage() {
     [filteredSellers, productSpecs, assistantAnswers]
   );
 
-  const visibleCount = showMore ? ranked.length : Math.min(10, ranked.length);
-  const visibleSellers = ranked.slice(0, visibleCount);
+  const visibleSellers = ranked.slice(0, 10);
 
   const triggerShimmer = () => {
     setShimmer(true);
@@ -333,12 +331,12 @@ export default function SearchPage() {
                 </div>
               )}
 
-              {/* Sellers grid — flex-1 with min-h-0 so it fills available height */}
+              {/* Sellers grid — fills available height with 2 rows of 5 */}
               <div
                 data-testid="sellers-grid"
-                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 grid-rows-2 flex-1 min-h-0 overflow-hidden"
+                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 grid-rows-2 flex-1 min-h-0 auto-rows-fr"
               >
-                {visibleSellers.slice(0, 10).map((s, i) => (
+                {ranked.slice(0, 10).map((s, i) => (
                   <SellerCard
                     key={s.name + i}
                     seller={s}
@@ -351,27 +349,14 @@ export default function SearchPage() {
                     isFav={favorites.has(s.name)}
                   />
                 ))}
-                {visibleSellers.length === 0 && (
+                {ranked.length === 0 && (
                   <div className="col-span-full text-center py-10 text-[13px] text-slate-500">
                     No sellers found. Try removing a filter or expanding location.
                   </div>
                 )}
               </div>
 
-              {/* View More CTA — always within viewport, just below the grid */}
-              {ranked.length > 10 && (
-                <div className="mt-2 flex items-center justify-center shrink-0">
-                  <button
-                    data-testid="view-more-sellers"
-                    onClick={() => setShowMore((v) => !v)}
-                    className="h-8 px-5 rounded-md bg-white border border-slate-300 hover:border-[#0f1f5c] text-[11.5px] font-semibold text-slate-800 hover:text-[#0f1f5c] transition-colors"
-                  >
-                    {showMore ? `Show less ↑` : `View ${ranked.length - 10} more sellers →`}
-                  </button>
-                </div>
-              )}
-
-              {/* Buyer assistant */}
+              {/* Buyer assistant — appears in results phase */}
               {phase === "results" && (
                 <div className="mt-2 shrink-0">
                   <BuyerAssistant
