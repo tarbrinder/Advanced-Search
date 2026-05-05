@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Sidebar from "../components/Sidebar";
 import InlineSearch from "../components/InlineSearch";
@@ -8,24 +9,21 @@ import ExploreCategories from "../components/ExploreCategories";
 import PastOrders from "../components/PastOrders";
 import MoreForYou from "../components/MoreForYou";
 import Footer from "../components/Footer";
-import SearchModal from "../components/SearchModal";
 import { MessagesCard, VerifyCard, PriceTrendsCard, StrengthenProfile } from "../components/SidePanels";
 import { SIDEBAR_ITEMS } from "../data/mockData";
 import { Radio, Trash2 } from "lucide-react";
 
 export default function Dashboard() {
+  const nav = useNavigate();
   const [location, setLocation] = useState("Dharamsala");
   const [activeNav, setActiveNav] = useState("dashboard");
   const [headerQuery, setHeaderQuery] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
   const [showProfileBar, setShowProfileBar] = useState(true);
   const [showRFQBanner, setShowRFQBanner] = useState(true);
 
   const triggerSearch = (q) => {
-    setSearchTerm(q);
-    setHeaderQuery(q);
-    setModalOpen(true);
+    if (!q || !q.trim()) return;
+    nav(`/search?q=${encodeURIComponent(q.trim())}&loc=${encodeURIComponent(location)}`);
   };
 
   return (
@@ -93,8 +91,6 @@ export default function Dashboard() {
           <Footer />
         </main>
       </div>
-
-      <SearchModal open={modalOpen} query={searchTerm} location={location} setLocation={setLocation} onClose={() => setModalOpen(false)} />
 
       {/* Floating help button */}
       <button
