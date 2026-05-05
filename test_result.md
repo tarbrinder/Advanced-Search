@@ -101,3 +101,95 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  IndiaMART B2B Buyer Dashboard UI clone. Latest change: fix the Call CTA on SellerCard
+  so clicking "Call" no longer distorts the card (button used to expand to show the phone
+  number inline). Also surface two new data points on every seller card: Years Experience
+  and Response Rate.
+
+frontend:
+  - task: "SellerCard — floating phone chip on Call click"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/search/SellerCard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Converted the revealed phone number into an absolute-positioned floating chip
+          above the Call button (z-40). Call button label stays "Call" to prevent width
+          distortion. Chip has copy-to-clipboard, tel: link, × dismiss, Escape/outside-
+          click dismiss, downward arrow pointing to the button. Removed overflow-hidden
+          from card root; image uses rounded-t-[10px] instead. Added phone-chip keyframe
+          in tailwind.config.js.
+  - task: "SellerCard — Years Experience + Response Rate row"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/search/SellerCard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added a compact metadata row between StarRow and tag row showing
+          "{yearsExp} yrs · {responsiveness}% reply" with Briefcase and Zap icons.
+          Values come from rankSellers.js enrichSellers (already present).
+
+backend:
+  - task: "/api/ai/refine-questions (Gemini)"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Unchanged in this iteration; previously verified."
+
+metadata:
+  created_by: "main_agent"
+  version: "6.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "SellerCard — floating phone chip on Call click"
+    - "SellerCard — Years Experience + Response Rate row"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Please run a focused visual/UX regression on the SearchPage at
+      /search?q=diesel+generator (1920×800 desktop):
+      1. Every seller card shows a new row "X yrs · X% reply" directly below the rating
+         and above the trust tags. Verify it never wraps to 2 lines on any card.
+      2. Click the Call button on the FIRST card:
+         a. A small white chip with navy border appears ABOVE the Call button
+         b. Chip contains +91 phone number, copy icon, × close icon
+         c. Other 9 cards keep the original "Call" button width (unchanged)
+         d. The active card's own Call button does not grow wider — label stays "Call"
+         e. Pressing Escape hides the chip
+         f. Clicking outside the chip hides the chip
+         g. Clicking the × in the chip hides the chip
+         h. Clicking the copy icon copies the number (test via navigator.clipboard or
+            just verify the green check appears briefly)
+      3. Click Call on 2 different cards one after another — only one chip visible at
+         a time is NOT required (each card manages its own state); what IS required is
+         that neither card's layout shifts when toggled.
+      4. Also regression-check: Find Best Match flow still works, Buyer Assistant
+         still renders with 3-question cap, Payment Protected "Coming soon" still
+         shows as the greyed chip (not clickable).
+      Please do NOT test anything related to mobile at this stage (that is scheduled
+      for the next iteration).

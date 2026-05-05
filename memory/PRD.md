@@ -29,6 +29,15 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-05 · v6 — Call CTA floating chip + seller trust data)
+- [x] Call CTA no longer distorts card layout — revealed phone number now renders as an **absolute-positioned floating chip** above the Call button (high z-index)
+- [x] Chip includes: click-to-dial link, copy-to-clipboard, dismiss (×), downward arrow pointing to the Call button
+- [x] Chip auto-dismisses on outside click or Escape key
+- [x] Call button label stays a constant "Call" — no width/text swap, no reflow
+- [x] Card root `overflow-hidden` removed so chip can float outside; image `rounded-t-[10px]` applied to preserve card visual
+- [x] New `phone-chip` Tailwind keyframe (160ms ease-out fade+slide)
+- [x] New data row on every `SellerCard`: **Years Experience** (Briefcase icon) · **Response Rate** (Zap icon) — values already produced by `rankSellers.js` (`yearsExp`, `responsiveness`)
+
 
 ## Completed (2026-04-27 · v5 — multi-question assistant)
 - [x] Buyer-assistant header copy: "Answer these questions to help me serve you better"
