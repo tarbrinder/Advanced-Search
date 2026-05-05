@@ -110,6 +110,7 @@ export default function SearchPage() {
   const [favorites, setFavorites] = useState(new Set());
   const [shimmer, setShimmer] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
+  const [enquiryToast, setEnquiryToast] = useState(null); // { sellerName } | null
 
   // Mobile filter drawer
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -214,52 +215,12 @@ export default function SearchPage() {
         hideSearch
       />
 
-      {/* Sub-header — query + location + Local only + count */}
-      <div className="bg-white border-b border-slate-200 shrink-0">
-        <div className="px-3 md:px-6 py-2 flex items-center gap-3 flex-wrap">
-          <button
-            data-testid="back-btn"
-            onClick={() => nav(-1)}
-            className="shrink-0 inline-flex items-center gap-1 text-slate-600 hover:text-[#0f1f5c] text-[12px] font-semibold"
-          >
-            <ArrowLeft size={15} /> Back
-          </button>
-          <div className="shrink-0 flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#6d28d9] bg-[#6d28d9]/10 px-2 py-0.5 rounded">
-              Product Search
-            </span>
-            <h1 data-testid="search-page-query" className="text-[15px] md:text-[16px] font-bold text-[#0a6640] tracking-tight">
-              {query}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 ml-auto flex-wrap">
-            <LocationPicker value={location} onChange={setLocation} />
-            <label
-              data-testid="local-only-toggle"
-              className="inline-flex items-center gap-1.5 cursor-pointer select-none h-7 px-2 rounded-md border border-slate-200 bg-white hover:border-teal-400 transition-colors"
-            >
-              <input
-                type="checkbox"
-                data-testid="local-only-checkbox"
-                checked={localOnly}
-                onChange={(e) => { setLocalOnly(e.target.checked); triggerShimmer(); }}
-                className="w-3.5 h-3.5 accent-teal-500 cursor-pointer"
-              />
-              <span className="text-[11px] font-semibold text-slate-700">Local only</span>
-            </label>
-            <span className="text-[11px] text-slate-500 hidden sm:block">
-              <span className="font-bold text-slate-800">{ranked.length}</span> results
-            </span>
-          </div>
-        </div>
-      </div>
-
       {/* Main body — fully fixed height, no page scroll */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Slim collapsible left nav (icons only) */}
+        {/* Slim collapsible left nav (icons only) — extends up to header */}
         <CollapsibleSidebar active="dashboard" onNavigate={(href) => nav(href)} />
 
-        {/* Filter panel (sticky) */}
+        {/* Filter panel (sticky) — also extends up to header */}
         <FilterPanel
           mobileOpen={mobileFiltersOpen}
           onMobileClose={() => setMobileFiltersOpen(false)}
@@ -282,7 +243,50 @@ export default function SearchPage() {
         />
 
         {/* Right content — flex column, internal regions sized so no page scroll */}
-        <main className="flex-1 min-w-0 px-3 md:px-4 py-2.5 flex flex-col overflow-hidden">
+        <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+          {/* Sub-header — query + location + Local only + count
+              (moved into main column so the left nav + refine panel extend to header) */}
+          <div className="bg-white border-b border-slate-200 shrink-0">
+            <div className="px-3 md:px-5 py-2 flex items-center gap-3 flex-wrap">
+              <button
+                data-testid="back-btn"
+                onClick={() => nav(-1)}
+                className="shrink-0 inline-flex items-center gap-1 text-slate-600 hover:text-[#0f1f5c] text-[12px] font-semibold"
+              >
+                <ArrowLeft size={15} /> Back
+              </button>
+              <div className="shrink-0 flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6d28d9] bg-[#6d28d9]/10 px-2 py-0.5 rounded">
+                  Product Search
+                </span>
+                <h1 data-testid="search-page-query" className="text-[15px] md:text-[16px] font-bold text-[#0a6640] tracking-tight">
+                  {query}
+                </h1>
+              </div>
+              <div className="flex items-center gap-2 ml-auto flex-wrap">
+                <LocationPicker value={location} onChange={setLocation} />
+                <label
+                  data-testid="local-only-toggle"
+                  className="inline-flex items-center gap-1.5 cursor-pointer select-none h-7 px-2 rounded-md border border-slate-200 bg-white hover:border-teal-400 transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    data-testid="local-only-checkbox"
+                    checked={localOnly}
+                    onChange={(e) => { setLocalOnly(e.target.checked); triggerShimmer(); }}
+                    className="w-3.5 h-3.5 accent-teal-500 cursor-pointer"
+                  />
+                  <span className="text-[11px] font-semibold text-slate-700">Local only</span>
+                </label>
+                <span className="text-[11px] text-slate-500 hidden sm:block">
+                  <span className="font-bold text-slate-800">{ranked.length}</span> results
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Inner padded region */}
+          <div className="flex-1 min-h-0 px-3 md:px-4 py-2.5 flex flex-col overflow-hidden">
           {/* Mobile filter trigger */}
           <button
             data-testid="open-mobile-filters"
@@ -361,6 +365,10 @@ export default function SearchPage() {
                       setFavorites(nx);
                     }}
                     isFav={favorites.has(s.name)}
+                    onEnquiry={(sel) => {
+                      setEnquiryToast({ sellerName: sel.name, at: Date.now() });
+                      setTimeout(() => setEnquiryToast(null), 2400);
+                    }}
                   />
                 ))}
                 {ranked.length === 0 && (
@@ -386,6 +394,7 @@ export default function SearchPage() {
               )}
             </div>
           )}
+          </div>
         </main>
       </div>
       <Toast
@@ -394,6 +403,21 @@ export default function SearchPage() {
         message="Requirement captured"
         sub="More sellers will connect with you over SMS & Email."
       />
+
+      {/* Enquiry sent toast */}
+      {enquiryToast && (
+        <div
+          data-testid="enquiry-sent-toast"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-lg shadow-xl text-[12.5px] font-semibold flex items-center gap-2 animate-phone-chip"
+        >
+          <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+          Enquiry sent to <span className="font-bold">{enquiryToast.sellerName}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -589,20 +613,20 @@ function FilterPanel(props) {
                   data-testid={`trust-${t.id}`}
                   disabled={disabled}
                   onClick={() => !disabled && toggleArr(selectedTrust, setSelectedTrust, t.id)}
-                  className={`relative inline-flex items-center gap-1 px-2 h-6 text-[10.5px] rounded-full border transition-colors ${
+                  className={`relative inline-flex items-center gap-1 px-2 h-6 text-[10.5px] rounded-full border transition-colors whitespace-nowrap ${
                     disabled
-                      ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                      ? "border-amber-200 bg-amber-50/70 text-amber-800 cursor-not-allowed"
                       : sel
                       ? "bg-[#0f1f5c] border-[#0f1f5c] text-white font-semibold"
                       : "border-slate-200 text-slate-600 hover:border-[#0f1f5c] bg-white"
                   }`}
-                  title={disabled ? "Coming soon" : t.label}
+                  title={disabled ? "Payment Protected — coming soon" : t.label}
                 >
                   <Icon size={9.5} />
-                  {t.label}
+                  <span className="font-semibold">{t.label}</span>
                   {disabled && (
-                    <span className="ml-0.5 text-[8px] font-bold bg-amber-100 text-amber-700 px-1 rounded">
-                      Coming soon
+                    <span className="ml-0.5 text-[8.5px] font-bold bg-amber-200/70 text-amber-900 px-1.5 py-[1px] rounded-full leading-none">
+                      Soon
                     </span>
                   )}
                 </button>

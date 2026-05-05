@@ -80,12 +80,34 @@ module.exports = {
   					opacity: '1',
   					transform: 'translateY(0) scale(1)'
   				}
+  			},
+  			'icon-flip': {
+  				'0%': {
+  					opacity: '0',
+  					transform: 'rotateY(90deg) scale(0.6)'
+  				},
+  				'100%': {
+  					opacity: '1',
+  					transform: 'rotateY(0deg) scale(1)'
+  				}
+  			},
+  			'call-flip': {
+  				'0%': {
+  					opacity: '0',
+  					transform: 'rotateX(80deg)'
+  				},
+  				'100%': {
+  					opacity: '1',
+  					transform: 'rotateX(0deg)'
+  				}
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'phone-chip': 'phone-chip 160ms ease-out'
+  			'phone-chip': 'phone-chip 160ms ease-out',
+  			'icon-flip': 'icon-flip 240ms ease-out',
+  			'call-flip': 'call-flip 220ms ease-out'
   		}
   	}
   },

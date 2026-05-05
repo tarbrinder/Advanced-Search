@@ -29,6 +29,16 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-05 · v7 — SearchPage layout refactor + in-place CTA flip)
+- [x] **Layout refactor**: sub-header row (Back / PRODUCT SEARCH / query / Location / Local only / count) moved INSIDE `<main>` column. Left nav + Refine Results panel now extend all the way up to the navy header — frees vertical space for more filters.
+- [x] `CollapsibleSidebar`: removed the hard-coded `sticky top-[64px] h-[calc(100vh-64px)]` in favor of `h-full` so it fills the flex row cleanly.
+- [x] **CTA row redesign** in `SellerCard.jsx`:
+  - Floating phone chip removed (was getting clipped by the filter panel at smaller viewports).
+  - "Send Enquiry" minimized to a 36 px icon-only button (Send icon) that flips to a green ✓ after click + fires an "Enquiry sent to {seller}" toast at the bottom-center of the page.
+  - "Call" button is now `flex-1`; clicking flips the content in-place from `📞 Call` → `📞 +91 XXXXX XXXXX`. Button width and card layout stay constant (no reflow, no overflow).
+  - Added `icon-flip` + `call-flip` Tailwind keyframes for micro-animations.
+- [x] **Payment Protected filter chip**: added `whitespace-nowrap` so the label + "Soon" pill stay on a single line; re-styled to amber background with a rounded-pill "Soon" badge for clearer disabled/coming-soon state.
+
 ## Completed (2026-05-05 · v6 — Call CTA floating chip + seller trust data)
 - [x] Call CTA no longer distorts card layout — revealed phone number now renders as an **absolute-positioned floating chip** above the Call button (high z-index)
 - [x] Chip includes: click-to-dial link, copy-to-clipboard, dismiss (×), downward arrow pointing to the Call button

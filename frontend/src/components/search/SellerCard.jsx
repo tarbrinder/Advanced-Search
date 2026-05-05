@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Star,
   ShieldCheck,
@@ -8,8 +8,7 @@ import {
   Phone,
   Briefcase,
   Zap,
-  X,
-  Copy,
+  Send,
   Check,
 } from "lucide-react";
 
@@ -45,67 +44,40 @@ function Tag({ active, label, icon: Icon, activeClass, inactiveClass, extra }) {
 
 /**
  * Uniform compact seller card for the SearchPage grid.
- * Sized to fit a 5×2 grid in a 720px viewport without clipping.
- * The revealed phone number renders as a floating chip (absolute positioned
- * with high z-index) so the card layout stays stable on click.
+ *
+ * CTA row (inside card, no floating popovers — never clipped):
+ *   [ Send (icon-only, ~36px) ]  [ Call  (flex-1, flips in-place to phone number) ]
+ *   - Send icon-flips to green tick + tooltip "Enquiry sent" after click.
+ *   - Call button text swaps between "Call" and the phone number IN PLACE
+ *     (button width is constant flex-1 → no layout shift).
  */
-export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFav }) {
+export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFav, onEnquiry }) {
   const matchOutOf = totalFilters > 0 ? totalFilters : 3;
   const matched = Math.min(matchOutOf, Math.max(1, Math.round(((seller.specMatch || 4) / 5) * matchOutOf)));
   const [showPhone, setShowPhone] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const chipRef = useRef(null);
-  const btnRef = useRef(null);
+  const [sent, setSent] = useState(false);
 
   const phoneNumber = seller.phone || "+91 98765 43210";
   const yearsExp = seller.yearsExp ?? 5;
   const responseRate = seller.responsiveness ?? 85;
 
-  // Close floating chip on outside click / Escape
-  useEffect(() => {
-    if (!showPhone) return;
-    const handleClick = (e) => {
-      if (
-        chipRef.current &&
-        !chipRef.current.contains(e.target) &&
-        btnRef.current &&
-        !btnRef.current.contains(e.target)
-      ) {
-        setShowPhone(false);
-      }
-    };
-    const handleKey = (e) => {
-      if (e.key === "Escape") setShowPhone(false);
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [showPhone]);
-
-  const copyNumber = async (e) => {
+  const handleEnquiry = (e) => {
     e.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(phoneNumber.replace(/\s/g, ""));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* noop */
-    }
+    if (sent) return;
+    setSent(true);
+    if (typeof onEnquiry === "function") onEnquiry(seller);
   };
 
   return (
     <div
       data-testid={`seller-card-${seller.name}`}
-      className="relative rounded-[10px] bg-white border border-slate-200 hover:shadow-md transition-shadow flex flex-col self-start"
+      className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col self-start"
     >
       <div className="relative shrink-0">
         <img
           src={seller.image}
           alt={seller.name}
-          className="w-full h-20 object-cover rounded-t-[10px]"
+          className="w-full h-20 object-cover"
           onError={(e) => { e.currentTarget.src = "https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=400"; }}
         />
         <div className="absolute top-1.5 left-1.5 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
@@ -132,7 +104,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
 
         <StarRow rating={seller.rating} />
 
-        {/* NEW: Years experience · Response rate */}
+        {/* Years experience · Response rate */}
         <div className="flex items-center gap-1.5 text-[9.5px] font-semibold text-slate-600 leading-none">
           <span
             className="inline-flex items-center gap-0.5"
@@ -181,74 +153,59 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
           </span>
         </div>
 
-        <div className="relative flex gap-1.5 mt-1">
+        {/* CTA row — compact Send icon + flex-1 Call button */}
+        <div className="flex gap-1 mt-1">
+          {/* Send Enquiry icon-only button (flips to ✓ on click) */}
           <button
             data-testid={`seller-enquiry-${seller.name}`}
-            className="flex-1 h-7 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-[11px] font-bold transition-colors"
+            onClick={handleEnquiry}
+            aria-label={sent ? "Enquiry sent" : "Send enquiry"}
+            title={sent ? "Enquiry sent" : "Send enquiry"}
+            disabled={sent}
+            className={`relative h-7 w-9 shrink-0 rounded-md flex items-center justify-center transition-all duration-300 ${
+              sent
+                ? "bg-emerald-500 text-white cursor-default"
+                : "bg-teal-500 hover:bg-teal-600 text-white"
+            }`}
           >
-            Send Enquiry
+            <span
+              key={sent ? "sent" : "send"}
+              className="inline-flex items-center justify-center animate-icon-flip"
+            >
+              {sent ? <Check size={14} strokeWidth={3} /> : <Send size={12} strokeWidth={2.5} />}
+            </span>
           </button>
+
+          {/* Call button — flips in place between "Call" and phone number */}
           <button
-            ref={btnRef}
             data-testid={`seller-call-${seller.name}`}
             onClick={(e) => {
               e.stopPropagation();
               setShowPhone((s) => !s);
             }}
             aria-expanded={showPhone}
-            aria-label={showPhone ? "Hide phone number" : "Reveal phone number"}
-            title={showPhone ? "Hide number" : "Reveal number"}
-            className={`h-7 px-2.5 rounded-md text-[11px] font-bold border transition-colors flex items-center gap-1 shrink-0 ${
+            aria-label={showPhone ? `Hide number ${phoneNumber}` : "Reveal phone number"}
+            title={showPhone ? "Click to hide" : "Click to reveal number"}
+            className={`flex-1 min-w-0 h-7 px-1.5 rounded-md border font-bold transition-colors flex items-center justify-center gap-1 overflow-hidden ${
               showPhone
                 ? "bg-[#0f1f5c] border-[#0f1f5c] text-white"
                 : "bg-white border-[#0f1f5c] text-[#0f1f5c] hover:bg-[#0f1f5c] hover:text-white"
             }`}
           >
-            <Phone size={11} />
-            Call
-          </button>
-
-          {/* Floating phone chip — absolute so card layout never shifts */}
-          {showPhone && (
-            <div
-              ref={chipRef}
-              data-testid={`seller-phone-chip-${seller.name}`}
-              role="dialog"
-              className="absolute bottom-full right-0 mb-2 z-40 bg-white border border-[#0f1f5c] rounded-lg shadow-xl px-2.5 py-1.5 flex items-center gap-1.5 whitespace-nowrap animate-phone-chip"
-              style={{ minWidth: "max-content" }}
+            <span
+              key={showPhone ? "phone" : "call"}
+              className="inline-flex items-center gap-1 min-w-0 animate-call-flip"
             >
-              <Phone size={11} className="text-[#0f1f5c] shrink-0" />
-              <a
-                href={`tel:${phoneNumber.replace(/\s/g, "")}`}
-                className="text-[11.5px] font-bold text-[#0f1f5c] tracking-tight tabular-nums hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {phoneNumber}
-              </a>
-              <button
-                onClick={copyNumber}
-                title={copied ? "Copied" : "Copy number"}
-                className="ml-0.5 w-5 h-5 rounded flex items-center justify-center text-slate-500 hover:text-[#0f1f5c] hover:bg-slate-100 transition-colors"
-              >
-                {copied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPhone(false);
-                }}
-                title="Hide"
-                className="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              >
-                <X size={11} />
-              </button>
-              {/* Arrow pointing down to the Call button */}
-              <span
-                aria-hidden="true"
-                className="absolute -bottom-[5px] right-4 w-2 h-2 bg-white border-r border-b border-[#0f1f5c] rotate-45"
-              />
-            </div>
-          )}
+              <Phone size={11} className="shrink-0" />
+              {showPhone ? (
+                <span className="tabular-nums tracking-tight text-[10.5px] truncate">
+                  {phoneNumber}
+                </span>
+              ) : (
+                <span className="text-[11px]">Call</span>
+              )}
+            </span>
+          </button>
         </div>
       </div>
     </div>

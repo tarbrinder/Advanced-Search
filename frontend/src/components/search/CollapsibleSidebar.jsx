@@ -25,7 +25,7 @@ export default function CollapsibleSidebar({ active = "dashboard", onSelect, onN
   return (
     <aside
       data-testid="search-sidebar"
-      className="hidden md:flex w-[56px] shrink-0 border-r border-slate-200 bg-white flex-col items-center py-3 gap-1 sticky top-[64px] h-[calc(100vh-64px)]"
+      className="hidden md:flex w-[56px] shrink-0 border-r border-slate-200 bg-white flex-col items-center py-3 gap-1 h-full overflow-y-auto scrollbar-hide"
     >
       {/* User avatar */}
       <div
