@@ -16,10 +16,16 @@ export function enrichSellers(sellers, answers = {}) {
     const responsiveness = 70 + (h % 28);
     const trustSeal = s.trustSeal !== undefined ? s.trustSeal : (h % 5 !== 0); // ~80% trust
     const paymentProtected = (h % 4 !== 0); // ~75% protected
+    // Generate a stable Indian mobile number per seller
+    const last7 = (h % 9000000) + 1000000;
+    const prefix = ["98", "97", "96", "99", "70", "82", "85"][h % 7];
+    const mid = String((h >> 4) % 100).padStart(2, "0");
+    const phone = `+91 ${prefix}${mid}${String(last7).slice(0, 1)} ${String(last7).slice(1)}`;
     return {
       ...s,
       trustSeal,
       paymentProtected,
+      phone,
       specMatch,
       distanceKm,
       responsiveness,

@@ -1,15 +1,13 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { ArrowRight } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const BATCH_SIZE = 3;
 
 /**
  * Compact buyer-requirement assistant.
- * Shows 2-3 questions at a time as a horizontal row.
- * Header copy: "Answer these questions to help me serve you better"
- * No Skip option. "Next" advances to the next batch (or fires onRefine on the last).
+ * Shows EXACTLY 3 questions in a single row. No batching, no Skip.
+ * On Submit fires onSubmit() (which shows the toaster) + onRefine().
  */
 export default function BuyerAssistant({
   productName,
@@ -18,16 +16,14 @@ export default function BuyerAssistant({
   quantity,
   answers,
   onAnswer,
-  onRefine,
+  onSubmit,
 }) {
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState([]);
-  const [batch, setBatch] = useState(0);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    setBatch(0);
     axios
       .post(`${API}/ai/refine-questions`, {
         product_name: productName,
@@ -39,29 +35,18 @@ export default function BuyerAssistant({
       })
       .then((res) => {
         if (!alive) return;
-        const productQs = (res.data.suggested || []).slice(0, 4);
+        const productQs = (res.data.suggested || []);
         const personaQs = res.data.persona || [];
-        // Filter out free-text questions (don't fit horizontal layout)
+        // Filter out free-text — chip-based only — take first 3
         const all = [...productQs, ...personaQs]
           .filter((q) => q.options && q.options.length > 0)
-          .slice(0, 6);
+          .slice(0, 3);
         setQuestions(all);
         setLoading(false);
       })
       .catch(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [productName, JSON.stringify(filledSpecs), JSON.stringify(isqSpecs), quantity]);
-
-  const totalBatches = Math.max(1, Math.ceil(questions.length / BATCH_SIZE));
-  const visibleQs = useMemo(
-    () => questions.slice(batch * BATCH_SIZE, (batch + 1) * BATCH_SIZE),
-    [questions, batch]
-  );
-
-  const handleNext = () => {
-    if (batch + 1 < totalBatches) setBatch(batch + 1);
-    else onRefine();
-  };
 
   if (loading) {
     return (
@@ -84,16 +69,14 @@ export default function BuyerAssistant({
         <span className="text-[12px] text-slate-500">Want even better matches?</span>
         <button
           data-testid="refine-results-btn"
-          onClick={onRefine}
+          onClick={() => onSubmit?.()}
           className="h-8 px-3 rounded-md bg-[#0f1f5c] hover:bg-[#172d80] text-white text-[12px] font-semibold flex items-center gap-1"
         >
-          Refine <ArrowRight size={12} />
+          Submit <ArrowRight size={12} />
         </button>
       </div>
     );
   }
-
-  const isLastBatch = batch + 1 >= totalBatches;
 
   return (
     <div
@@ -101,23 +84,20 @@ export default function BuyerAssistant({
       className="rounded-[12px] border border-[#6d28d9]/25 bg-gradient-to-r from-[#6d28d9]/6 via-white to-[#0f1f5c]/5 px-4 py-2.5"
     >
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-[11.5px] font-semibold text-[#0f1f5c]">
+        <span className="text-[12px] font-semibold text-[#0f1f5c]">
           Answer these questions to help me serve you better
         </span>
-        <span className="text-[10px] font-semibold text-[#6d28d9] uppercase tracking-wide ml-auto">
-          {batch + 1}/{totalBatches}
-        </span>
         <button
-          data-testid="assistant-next-btn"
-          onClick={handleNext}
-          className="h-7 px-3 rounded-md bg-[#0f1f5c] hover:bg-[#172d80] text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
+          data-testid="assistant-submit-btn"
+          onClick={() => onSubmit?.()}
+          className="ml-auto h-7 px-3 rounded-md bg-[#0f1f5c] hover:bg-[#172d80] text-white text-[11.5px] font-semibold flex items-center gap-1 transition-colors shrink-0"
         >
-          {isLastBatch ? "Refine" : "Next"} <ArrowRight size={11} />
+          Submit <ArrowRight size={11} />
         </button>
       </div>
 
-      <div className={`grid grid-cols-${visibleQs.length} gap-4`} style={{ gridTemplateColumns: `repeat(${visibleQs.length}, minmax(0, 1fr))` }}>
-        {visibleQs.map((q) => (
+      <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${questions.length}, minmax(0, 1fr))` }}>
+        {questions.map((q) => (
           <div key={q.name} data-testid={`question-${q.name}`} className="min-w-0">
             <div className="text-[11px] font-bold text-slate-800 truncate">
               {q.name}

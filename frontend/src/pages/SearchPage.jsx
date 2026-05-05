@@ -11,6 +11,7 @@ import SellerCard from "../components/search/SellerCard";
 import AILoading from "../components/search/AILoading";
 import BuyerAssistant from "../components/search/BuyerAssistant";
 import CollapsibleSidebar from "../components/search/CollapsibleSidebar";
+import Toast from "../components/search/Toast";
 import { searchSellers } from "../data/mockData";
 import { rankSellers } from "../components/search/rankSellers";
 
@@ -108,6 +109,7 @@ export default function SearchPage() {
   // Display
   const [favorites, setFavorites] = useState(new Set());
   const [shimmer, setShimmer] = useState(false);
+  const [toastOpen, setToastOpen] = useState(false);
 
   // Mobile filter drawer
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -129,7 +131,14 @@ export default function SearchPage() {
     [filteredSellers, productSpecs, assistantAnswers]
   );
 
-  const visibleSellers = ranked.slice(0, 10);
+  // In filters phase show 10, in results phase show 5
+  const cardLimit = phase === "results" ? 5 : 10;
+  const visibleSellers = ranked.slice(0, cardLimit);
+
+  const handleAssistantSubmit = () => {
+    setToastOpen(true);
+    handleFindBestMatch(2500);
+  };
 
   const triggerShimmer = () => {
     setShimmer(true);
@@ -341,7 +350,7 @@ export default function SearchPage() {
                 className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 flex-1 min-h-0 overflow-y-auto auto-rows-min content-start scrollbar-hide"
                 style={{ scrollbarWidth: "none" }}
               >
-                {ranked.slice(0, 10).map((s, i) => (
+                {ranked.slice(0, cardLimit).map((s, i) => (
                   <SellerCard
                     key={s.name + i}
                     seller={s}
@@ -371,7 +380,7 @@ export default function SearchPage() {
                     quantity={Number(qty) || 0}
                     answers={assistantAnswers}
                     onAnswer={handleAssistantAnswer}
-                    onRefine={() => handleFindBestMatch(2500)}
+                    onSubmit={handleAssistantSubmit}
                   />
                 </div>
               )}
@@ -379,6 +388,12 @@ export default function SearchPage() {
           )}
         </main>
       </div>
+      <Toast
+        open={toastOpen}
+        onClose={() => setToastOpen(false)}
+        message="Requirement captured"
+        sub="More sellers will connect with you over SMS & Email."
+      />
     </div>
   );
 }

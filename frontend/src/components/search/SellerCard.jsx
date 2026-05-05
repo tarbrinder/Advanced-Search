@@ -1,5 +1,5 @@
-import React from "react";
-import { Star, ShieldCheck, CheckCircle2, MapPin, Heart } from "lucide-react";
+import React, { useState } from "react";
+import { Star, ShieldCheck, CheckCircle2, MapPin, Heart, Phone } from "lucide-react";
 
 function StarRow({ rating = 0 }) {
   return (
@@ -38,6 +38,7 @@ function Tag({ active, label, icon: Icon, activeClass, inactiveClass, extra }) {
 export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFav }) {
   const matchOutOf = totalFilters > 0 ? totalFilters : 3;
   const matched = Math.min(matchOutOf, Math.max(1, Math.round(((seller.specMatch || 4) / 5) * matchOutOf)));
+  const [showPhone, setShowPhone] = useState(false);
 
   return (
     <div
@@ -105,12 +106,27 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
           </span>
         </div>
 
-        <button
-          data-testid={`seller-enquiry-${seller.name}`}
-          className="w-full h-7 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-[11px] font-bold transition-colors mt-1"
-        >
-          Send Enquiry
-        </button>
+        <div className="flex gap-1.5 mt-1">
+          <button
+            data-testid={`seller-enquiry-${seller.name}`}
+            className="flex-1 h-7 bg-teal-500 hover:bg-teal-600 text-white rounded-md text-[11px] font-bold transition-colors"
+          >
+            Send Enquiry
+          </button>
+          <button
+            data-testid={`seller-call-${seller.name}`}
+            onClick={() => setShowPhone((s) => !s)}
+            title={showPhone ? "Hide number" : "Reveal number"}
+            className={`h-7 px-2 rounded-md text-[11px] font-bold border transition-colors flex items-center gap-1 ${
+              showPhone
+                ? "bg-[#0f1f5c] border-[#0f1f5c] text-white"
+                : "bg-white border-[#0f1f5c] text-[#0f1f5c] hover:bg-[#0f1f5c] hover:text-white"
+            }`}
+          >
+            <Phone size={11} />
+            {showPhone ? (seller.phone || "+91 98765 43210") : "Call"}
+          </button>
+        </div>
       </div>
     </div>
   );
