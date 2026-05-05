@@ -63,6 +63,7 @@ export default function SearchModal({ open, query, location, setLocation, onClos
   const [assistantAnswers, setAssistantAnswers] = useState({});
   const [favorites, setFavorites] = useState(new Set());
   const [shimmer, setShimmer] = useState(false);
+  const [localOnly, setLocalOnly] = useState(false);
 
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
@@ -81,11 +82,17 @@ export default function SearchModal({ open, query, location, setLocation, onClos
       setProductSpecs({});
       setAssistantAnswers({});
       setFavorites(new Set());
+      setLocalOnly(false);
     }
   }, [open, query]);
 
   const specs = useMemo(() => getProductSpecs(query), [query]);
-  const rawSellers = useMemo(() => (open ? searchSellers(query) : []), [open, query]);
+  const allSellers = useMemo(() => (open ? searchSellers(query) : []), [open, query]);
+  const rawSellers = useMemo(() => {
+    if (!localOnly || !location) return allSellers;
+    const city = location.toLowerCase();
+    return allSellers.filter((s) => (s.location || "").toLowerCase().includes(city));
+  }, [allSellers, localOnly, location]);
 
   const ranked = useMemo(
     () => rankSellers(rawSellers, { ...productSpecs, ...assistantAnswers }),
@@ -187,6 +194,22 @@ export default function SearchModal({ open, query, location, setLocation, onClos
           {setLocation && (
             <LocationPicker value={location || "Dharamsala"} onChange={setLocation} />
           )}
+
+          {/* Local sellers only toggle */}
+          <label
+            data-testid="local-only-toggle"
+            className="inline-flex items-center gap-1.5 shrink-0 cursor-pointer select-none h-7 px-2 rounded-md border border-slate-200 bg-white hover:border-teal-400 transition-colors"
+            title={`Show sellers in ${location || "this city"} only`}
+          >
+            <input
+              type="checkbox"
+              data-testid="local-only-checkbox"
+              checked={localOnly}
+              onChange={(e) => { setLocalOnly(e.target.checked); triggerShimmer(); }}
+              className="w-3.5 h-3.5 accent-teal-500 cursor-pointer"
+            />
+            <span className="text-[11px] font-semibold text-slate-700">Local only</span>
+          </label>
 
           {/* Inline selected-filter chips (scroll horizontally if many) */}
           {phase !== "loading" && (topChips.length > 0 || phase === "results") && (
