@@ -359,6 +359,7 @@ export default function SearchPage() {
                     key={s.name + i}
                     seller={s}
                     totalFilters={totalFiltersCount}
+                    showSpecMatch={phase === "results"}
                     onFavToggle={(n) => {
                       const nx = new Set(favorites);
                       nx.has(n) ? nx.delete(n) : nx.add(n);

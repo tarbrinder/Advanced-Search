@@ -51,7 +51,14 @@ function Tag({ active, label, icon: Icon, activeClass, inactiveClass, extra }) {
  *   - Call button text swaps between "Call" and the phone number IN PLACE
  *     (button width is constant flex-1 → no layout shift).
  */
-export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFav, onEnquiry }) {
+export default function SellerCard({
+  seller,
+  totalFilters = 0,
+  onFavToggle,
+  isFav,
+  onEnquiry,
+  showSpecMatch = true,   // hide spec-match chip on the plain Search page
+}) {
   const matchOutOf = totalFilters > 0 ? totalFilters : 3;
   const matched = Math.min(matchOutOf, Math.max(1, Math.round(((seller.specMatch || 4) / 5) * matchOutOf)));
   const [showPhone, setShowPhone] = useState(false);
@@ -92,40 +99,79 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
             <Heart size={10} className={isFav ? "fill-red-500 text-red-500" : "text-slate-500"} />
           </button>
         )}
+        {/* Compact rating pill — bottom-right of image (saves a full row below) */}
+        <div
+          className="absolute bottom-1.5 right-1.5 bg-white/95 backdrop-blur shadow-sm rounded-full h-[18px] pl-1 pr-1.5 inline-flex items-center gap-0.5"
+          title={`${seller.rating} of 5`}
+        >
+          <Star size={9} className="fill-amber-500 text-amber-500" />
+          <span className="text-[9.5px] font-bold text-slate-800 tabular-nums leading-none">
+            {Number(seller.rating).toFixed(2)}
+          </span>
+        </div>
       </div>
 
       {/* Compact content area — tight spacing, smaller text */}
       <div className="px-2 pt-1 pb-1.5 flex flex-col gap-[3px] flex-1 min-h-0 overflow-hidden">
         <div className="leading-tight">
-          <div className="font-bold text-[11px] text-slate-900 truncate leading-[1.15]">{seller.name}</div>
-          <div className="text-[9.5px] text-slate-500 truncate flex items-center gap-0.5 leading-[1.2]">
-            <MapPin size={8} className="text-slate-400 shrink-0" />
-            {seller.location}
+          {/* Name allows up to 2 lines so wrap looks intentional; reserved
+              min-height keeps every card the same total height regardless of
+              whether name is short or long. */}
+          <div
+            className="font-bold text-[11px] text-slate-900 leading-[1.15] line-clamp-2"
+            style={{ minHeight: "26px" }}
+            title={seller.name}
+          >
+            {seller.name}
+          </div>
+          {/* Location row — single line, ALWAYS reserves the same height even
+              if the seller object happens to be missing a location. */}
+          <div
+            className="text-[9.5px] text-slate-500 truncate flex items-center gap-0.5 leading-[1.2]"
+            style={{ minHeight: "13px" }}
+          >
+            {seller.location && (
+              <>
+                <MapPin size={8} className="text-slate-400 shrink-0" />
+                {seller.location}
+              </>
+            )}
           </div>
         </div>
 
-        <StarRow rating={seller.rating} />
-
-        {/* Years experience · Response rate */}
-        <div className="flex items-center gap-1 text-[9px] font-semibold text-slate-600 leading-none">
-          <span
-            className="inline-flex items-center gap-0.5"
-            title={`${yearsExp} years of business experience`}
-          >
-            <Briefcase size={8} className="text-slate-500" />
-            {yearsExp} yrs
-          </span>
-          <span className="w-px h-2 bg-slate-300" aria-hidden="true" />
-          <span
-            className="inline-flex items-center gap-0.5"
-            title={`Average seller response rate: ${responseRate}%`}
-          >
-            <Zap size={8} className="text-amber-500" />
-            {responseRate}% reply
-          </span>
+        {/* Years experience · Response rate (rating moved to image overlay).
+            Fixed min-height to keep card sync if either field is missing. */}
+        <div
+          className="flex items-center gap-1 text-[9px] font-semibold text-slate-600 leading-none"
+          style={{ minHeight: "12px" }}
+        >
+          {seller.yearsExp != null && (
+            <span
+              className="inline-flex items-center gap-0.5"
+              title={`${yearsExp} years of business experience`}
+            >
+              <Briefcase size={8} className="text-slate-500" />
+              {yearsExp} yrs
+            </span>
+          )}
+          {seller.yearsExp != null && seller.responsiveness != null && (
+            <span className="w-px h-2 bg-slate-300" aria-hidden="true" />
+          )}
+          {seller.responsiveness != null && (
+            <span
+              className="inline-flex items-center gap-0.5"
+              title={`Average seller response rate: ${responseRate}%`}
+            >
+              <Zap size={8} className="text-amber-500" />
+              {responseRate}% reply
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-[3px] flex-wrap">
+        {/* Trust chip row — fixed reserved height so cards stay vertically
+            synced no matter which combination of GST / TrustSEAL /
+            Pay-Protected is present (missing chips render muted+strike-through). */}
+        <div className="flex items-center gap-[3px] flex-wrap min-h-[16px]">
           <Tag
             active={!!seller.gst}
             label="GST"
@@ -147,12 +193,15 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
             activeClass="text-[#0a6640] bg-[#0a6640]/10"
             inactiveClass="text-slate-400 bg-slate-100 line-through"
           />
-          <span
-            title={`${matched} of your ${matchOutOf} specs matched`}
-            className="inline-flex items-center gap-0.5 text-[8.5px] font-semibold text-[#6d28d9] bg-[#6d28d9]/10 px-1 py-px rounded leading-none"
-          >
-            {matched}/{matchOutOf} specs
-          </span>
+          {/* Spec-match chip ONLY in Find-Best-Match phase */}
+          {showSpecMatch && (
+            <span
+              title={`${matched} of your ${matchOutOf} specs matched`}
+              className="inline-flex items-center gap-0.5 text-[8.5px] font-semibold text-[#6d28d9] bg-[#6d28d9]/10 px-1 py-px rounded leading-none"
+            >
+              {matched}/{matchOutOf} specs
+            </span>
+          )}
         </div>
 
         {/* CTA row — proportions SWAP when phone is revealed

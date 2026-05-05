@@ -104,6 +104,10 @@ const SEARCH_CATALOG = [
     { name: "Greaves Power Ltd", price: "₹3,95,000", location: "Chennai, Tamil Nadu", rating: 4.42, reviews: 189, gst: true, image: "https://images.pexels.com/photos/3862627/pexels-photo-3862627.jpeg?auto=compress&cs=tinysrgb&w=400" },
     { name: "Escorts Power Ltd", price: "₹3,78,000", location: "Faridabad, Haryana", rating: 4.33, reviews: 156, gst: true, image: "https://images.pexels.com/photos/4483609/pexels-photo-4483609.jpeg?auto=compress&cs=tinysrgb&w=400" },
     { name: "Ashok Leyland Power", price: "₹4,05,000", location: "Chennai, Tamil Nadu", rating: 4.68, reviews: 298, gst: true, image: "https://images.pexels.com/photos/1108572/pexels-photo-1108572.jpeg?auto=compress&cs=tinysrgb&w=400" },
+    // Edge-case seed: very long name (forces 2-line wrap) — sync test
+    { name: "Bharat Heavy Electricals & Industrial Diesel Solutions Ltd", price: "₹4,75,000", location: "Hyderabad, Telangana", rating: 4.62, reviews: 421, gst: true, image: "https://images.pexels.com/photos/162568/oil-pump-jack-sunset-clouds-silhouette-162568.jpeg?auto=compress&cs=tinysrgb&w=400" },
+    // Edge-case seed: NO GST (line-through chip) — sync test
+    { name: "PowerLine Generators", price: "₹3,55,000", location: "Indore, Madhya Pradesh", rating: 4.18, reviews: 87, gst: false, image: "https://images.pexels.com/photos/3862627/pexels-photo-3862627.jpeg?auto=compress&cs=tinysrgb&w=400" },
   ]},
   // Safety / Helmet / PPE
   { keywords: ["helmet", "safety", "ppe", "head"], sellers: [
