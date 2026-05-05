@@ -29,6 +29,16 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-05 · v10 — card content compression, image untouched)
+- [x] **Image is now FIXED at 88 px** (`shrink-0 h-[88px]`) — never shrinks or crops further regardless of viewport zoom.
+- [x] Stars: `size 11 → 9`, rating text `10.5 → 9.5 px`.
+- [x] Trust chips (`Tag` component): text `9.5 → 8.5 px`, padding `px-1.5 py-0.5 → px-1 py-px`, icon `9 → 8 px`. `whitespace-nowrap` already in place.
+- [x] Card title: `11.5 → 11 px`; location: `10 → 9.5 px`; yrs/reply row: `9.5 → 9 px`.
+- [x] Vertical rhythm: card content `gap-1 → gap-[3px]`, image overlay price chip text `10 → 9.5 px`.
+- [x] **CTAs untouched** — Send Enquiry + Call buttons remain at the same height/prominence.
+- [x] Grid row range tightened to `minmax(190 px, 210 px)` — uniform card heights at all zoom levels (search & FBM screens).
+- [x] Verified: page no scroll, grid no scroll, image height stable at 88 px, card height 210 px.
+
 ## Completed (2026-05-05 · v9 — fully non-scrollable SearchPage at 100% zoom)
 - [x] **Page no longer scrolls at 100% zoom** on standard laptop viewports (1366×768, 1440×900, 1920×1080).
 - [x] Seller grid switched from `flex-1 + auto-rows-min + overflow-y-auto` (which used to scroll inside) to `shrink-0` with **CSS-Grid `minmax(150 px, 220 px)` row heights** — cards stay visually consistent across all viewport sizes, no internal scroll either.

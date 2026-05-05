@@ -14,15 +14,15 @@ import {
 
 function StarRow({ rating = 0 }) {
   return (
-    <div className="flex items-center gap-0.5" aria-label={`${rating} of 5`}>
+    <div className="flex items-center gap-px leading-none" aria-label={`${rating} of 5`}>
       {[0, 1, 2, 3, 4].map((i) => (
         <Star
           key={i}
-          size={11}
+          size={9}
           className={i < Math.round(rating) ? "fill-amber-500 text-amber-500" : "fill-slate-200 text-slate-200"}
         />
       ))}
-      <span className="ml-1 text-[10.5px] font-semibold text-slate-700">{rating}</span>
+      <span className="ml-1 text-[9.5px] font-semibold text-slate-700">{rating}</span>
     </div>
   );
 }
@@ -30,14 +30,14 @@ function StarRow({ rating = 0 }) {
 function Tag({ active, label, icon: Icon, activeClass, inactiveClass, extra }) {
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-[9.5px] font-semibold px-1.5 py-0.5 rounded ${
+      className={`inline-flex items-center gap-0.5 text-[8.5px] font-semibold px-1 py-px rounded leading-none ${
         active ? activeClass : inactiveClass
       }`}
       title={extra ? `${label} · ${extra}` : label}
     >
-      {Icon && <Icon size={9} />}
+      {Icon && <Icon size={8} />}
       {label}
-      {extra && <span className="ml-0.5 text-[8px] font-bold opacity-80">· {extra}</span>}
+      {extra && <span className="ml-0.5 text-[7.5px] font-bold opacity-80">· {extra}</span>}
     </span>
   );
 }
@@ -73,14 +73,15 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
       data-testid={`seller-card-${seller.name}`}
       className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col min-h-0 h-full"
     >
-      <div className="relative shrink-0 basis-[22%] min-h-[48px] max-h-[88px]">
+      {/* Image — FIXED height, never shrunk or cropped (object-cover with stable h) */}
+      <div className="relative shrink-0 h-[88px]">
         <img
           src={seller.image}
           alt={seller.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover block"
           onError={(e) => { e.currentTarget.src = "https://images.pexels.com/photos/1108101/pexels-photo-1108101.jpeg?auto=compress&cs=tinysrgb&w=400"; }}
         />
-        <div className="absolute top-1.5 left-1.5 bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
+        <div className="absolute top-1.5 left-1.5 bg-slate-900 text-white text-[9.5px] font-bold px-1.5 py-0.5 rounded-full shadow-md">
           {seller.price}
         </div>
         {onFavToggle && (
@@ -93,11 +94,12 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
         )}
       </div>
 
-      <div className="px-2 pt-1.5 pb-2 flex flex-col gap-1 flex-1 min-h-0 overflow-hidden">
-        <div>
-          <div className="font-bold text-[11.5px] text-slate-900 truncate leading-tight">{seller.name}</div>
-          <div className="text-[10px] text-slate-500 truncate flex items-center gap-0.5 leading-tight">
-            <MapPin size={9} className="text-slate-400" />
+      {/* Compact content area — tight spacing, smaller text */}
+      <div className="px-2 pt-1 pb-1.5 flex flex-col gap-[3px] flex-1 min-h-0 overflow-hidden">
+        <div className="leading-tight">
+          <div className="font-bold text-[11px] text-slate-900 truncate leading-[1.15]">{seller.name}</div>
+          <div className="text-[9.5px] text-slate-500 truncate flex items-center gap-0.5 leading-[1.2]">
+            <MapPin size={8} className="text-slate-400 shrink-0" />
             {seller.location}
           </div>
         </div>
@@ -105,25 +107,25 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
         <StarRow rating={seller.rating} />
 
         {/* Years experience · Response rate */}
-        <div className="flex items-center gap-1.5 text-[9.5px] font-semibold text-slate-600 leading-none">
+        <div className="flex items-center gap-1 text-[9px] font-semibold text-slate-600 leading-none">
           <span
             className="inline-flex items-center gap-0.5"
             title={`${yearsExp} years of business experience`}
           >
-            <Briefcase size={9} className="text-slate-500" />
+            <Briefcase size={8} className="text-slate-500" />
             {yearsExp} yrs
           </span>
-          <span className="w-px h-2.5 bg-slate-300" aria-hidden="true" />
+          <span className="w-px h-2 bg-slate-300" aria-hidden="true" />
           <span
             className="inline-flex items-center gap-0.5"
             title={`Average seller response rate: ${responseRate}%`}
           >
-            <Zap size={9} className="text-amber-500" />
+            <Zap size={8} className="text-amber-500" />
             {responseRate}% reply
           </span>
         </div>
 
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-[3px] flex-wrap">
           <Tag
             active={!!seller.gst}
             label="GST"
@@ -147,7 +149,7 @@ export default function SellerCard({ seller, totalFilters = 0, onFavToggle, isFa
           />
           <span
             title={`${matched} of your ${matchOutOf} specs matched`}
-            className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-[#6d28d9] bg-[#6d28d9]/10 px-1.5 py-0.5 rounded"
+            className="inline-flex items-center gap-0.5 text-[8.5px] font-semibold text-[#6d28d9] bg-[#6d28d9]/10 px-1 py-px rounded leading-none"
           >
             {matched}/{matchOutOf} specs
           </span>
