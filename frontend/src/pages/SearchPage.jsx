@@ -459,9 +459,11 @@ export default function SearchPage() {
                 </div>
               )}
 
-              {/* Buyer assistant — appears in results phase */}
+              {/* Buyer assistant — PINNED at bottom of main column using
+                  mt-auto so the space between the seller grid and the
+                  assistant flexes regardless of how many cards are shown. */}
               {phase === "results" && (
-                <div className="mt-2 shrink-0">
+                <div className="mt-auto pt-3 shrink-0">
                   <BuyerAssistant
                     productName={query}
                     filledSpecs={productSpecs}

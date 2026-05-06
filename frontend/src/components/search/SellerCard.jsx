@@ -80,9 +80,9 @@ export default function SellerCard({
       data-testid={`seller-card-${seller.name}`}
       className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col min-h-0 h-full"
     >
-      {/* Image — FIXED height (now 112 px → ~27% taller than before by reclaiming
-          space from CTAs, padding, and a merged metadata row). Never shrinks. */}
-      <div className="relative shrink-0 h-[112px]">
+      {/* Image — FIXED height (124 px → ~10% taller than the previous
+          112 px per user request). Never shrinks, never crops. */}
+      <div className="relative shrink-0 h-[124px]">
         <img
           src={seller.image}
           alt={seller.name}
@@ -115,7 +115,7 @@ export default function SellerCard({
       {/* Compact content area — natural height. Card itself stretches
           (h-full) within its row, but content rows remain at their natural
           sizes so the GRID ROW can shrink when no card needs extra space. */}
-      <div className="px-2 pt-1 pb-1 flex flex-col gap-[2px] flex-1 min-w-0">
+      <div className="px-2 pt-1.5 pb-1.5 flex flex-col gap-[2px] flex-1 min-w-0">
         {/* Name — natural height (1 or 2 lines). CSS-Grid keeps cards in the
             SAME ROW visually aligned; a row of all single-line names is shorter
             than a row containing a wrap. */}
@@ -194,17 +194,17 @@ export default function SellerCard({
         </div>
 
         {/* CTA row — proportions SWAP when phone is revealed.
-            Height reduced to 24 px (h-6) to give image more vertical space. */}
-        <div className="flex gap-1 mt-auto pt-0.5">
-          {/* Send Enquiry — width animates between flex-1 and w-8 */}
+            Height 28px (h-7) — bumped +4px as part of the 10% vertical increase. */}
+        <div className="flex gap-1 mt-auto pt-1">
+          {/* Send Enquiry — width animates between flex-1 and w-9 */}
           <button
             data-testid={`seller-enquiry-${seller.name}`}
             onClick={handleEnquiry}
             aria-label={sent ? "Enquiry sent" : "Send enquiry"}
             title={sent ? "Enquiry sent" : "Send enquiry"}
             disabled={sent}
-            className={`relative h-6 shrink-0 rounded-md flex items-center justify-center gap-1 overflow-hidden transition-all duration-300 ease-out ${
-              showPhone ? "w-8" : "flex-1 px-2"
+            className={`relative h-7 shrink-0 rounded-md flex items-center justify-center gap-1 overflow-hidden transition-all duration-300 ease-out ${
+              showPhone ? "w-9" : "flex-1 px-2"
             } ${
               sent
                 ? "bg-emerald-500 text-white cursor-default"
@@ -213,22 +213,22 @@ export default function SellerCard({
           >
             <span className="inline-flex items-center justify-center shrink-0">
               {sent ? (
-                <Check size={12} strokeWidth={3} />
+                <Check size={13} strokeWidth={3} />
               ) : (
-                <Send size={showPhone ? 11 : 10} strokeWidth={2.5} />
+                <Send size={showPhone ? 12 : 11} strokeWidth={2.5} />
               )}
             </span>
             {!showPhone && (
               <span
                 key={sent ? "sent-label" : "enquiry-label"}
-                className="text-[10.5px] font-bold whitespace-nowrap animate-call-flip"
+                className="text-[11px] font-bold whitespace-nowrap animate-call-flip"
               >
                 {sent ? "Sent" : "Send Enquiry"}
               </span>
             )}
           </button>
 
-          {/* Call — width animates between w-8 (icon only) and flex-1 (full number) */}
+          {/* Call — width animates between w-9 (icon only) and flex-1 (full number) */}
           <button
             data-testid={`seller-call-${seller.name}`}
             onClick={(e) => {
@@ -238,19 +238,19 @@ export default function SellerCard({
             aria-expanded={showPhone}
             aria-label={showPhone ? `Hide number ${phoneNumber}` : "Reveal phone number"}
             title={showPhone ? "Click to hide" : "Click to reveal number"}
-            className={`h-6 shrink-0 rounded-md border font-bold transition-all duration-300 ease-out flex items-center justify-center gap-1 overflow-hidden ${
-              showPhone ? "flex-1 px-2 min-w-0" : "w-8"
+            className={`h-7 shrink-0 rounded-md border font-bold transition-all duration-300 ease-out flex items-center justify-center gap-1 overflow-hidden ${
+              showPhone ? "flex-1 px-2 min-w-0" : "w-9"
             } ${
               showPhone
                 ? "bg-[#0f1f5c] border-[#0f1f5c] text-white"
                 : "bg-white border-[#0f1f5c] text-[#0f1f5c] hover:bg-[#0f1f5c] hover:text-white"
             }`}
           >
-            <Phone size={showPhone ? 10 : 11} className="shrink-0" />
+            <Phone size={showPhone ? 11 : 12} className="shrink-0" />
             {showPhone && (
               <span
                 key="phone-number"
-                className="tabular-nums tracking-tight text-[10px] truncate animate-call-flip"
+                className="tabular-nums tracking-tight text-[10.5px] truncate animate-call-flip"
               >
                 {phoneNumber}
               </span>
