@@ -27,12 +27,12 @@ function StarRow({ rating = 0 }) {
   );
 }
 
-function Tag({ active, label, icon: Icon, activeClass, inactiveClass, extra }) {
+function Tag({ active, label, icon: Icon, activeClass, extra }) {
+  // Declutter: only render when active. Inactive tags are simply hidden.
+  if (!active) return null;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-[8.5px] font-semibold px-1 py-px rounded leading-none ${
-        active ? activeClass : inactiveClass
-      }`}
+      className={`inline-flex items-center gap-0.5 text-[8.5px] font-semibold px-1 py-px rounded leading-none ${activeClass}`}
       title={extra ? `${label} · ${extra}` : label}
     >
       {Icon && <Icon size={8} />}
@@ -80,8 +80,9 @@ export default function SellerCard({
       data-testid={`seller-card-${seller.name}`}
       className="rounded-[10px] bg-white border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col min-h-0 h-full"
     >
-      {/* Image — FIXED height, never shrunk or cropped (object-cover with stable h) */}
-      <div className="relative shrink-0 h-[88px]">
+      {/* Image — FIXED height (now 112 px → ~27% taller than before by reclaiming
+          space from CTAs, padding, and a merged metadata row). Never shrinks. */}
+      <div className="relative shrink-0 h-[112px]">
         <img
           src={seller.image}
           alt={seller.name}
@@ -99,7 +100,7 @@ export default function SellerCard({
             <Heart size={10} className={isFav ? "fill-red-500 text-red-500" : "text-slate-500"} />
           </button>
         )}
-        {/* Compact rating pill — bottom-right of image (saves a full row below) */}
+        {/* Compact rating pill — bottom-right of image */}
         <div
           className="absolute bottom-1.5 right-1.5 bg-white/95 backdrop-blur shadow-sm rounded-full h-[18px] pl-1 pr-1.5 inline-flex items-center gap-0.5"
           title={`${seller.rating} of 5`}
@@ -111,87 +112,75 @@ export default function SellerCard({
         </div>
       </div>
 
-      {/* Compact content area — tight spacing, smaller text */}
-      <div className="px-2 pt-1 pb-1.5 flex flex-col gap-[3px] flex-1 min-h-0 overflow-hidden">
-        <div className="leading-tight">
-          {/* Name allows up to 2 lines so wrap looks intentional; reserved
-              min-height keeps every card the same total height regardless of
-              whether name is short or long. */}
-          <div
-            className="font-bold text-[11px] text-slate-900 leading-[1.15] line-clamp-2"
-            style={{ minHeight: "26px" }}
-            title={seller.name}
-          >
-            {seller.name}
-          </div>
-          {/* Location row — single line, ALWAYS reserves the same height even
-              if the seller object happens to be missing a location. */}
-          <div
-            className="text-[9.5px] text-slate-500 truncate flex items-center gap-0.5 leading-[1.2]"
-            style={{ minHeight: "13px" }}
-          >
-            {seller.location && (
-              <>
-                <MapPin size={8} className="text-slate-400 shrink-0" />
-                {seller.location}
-              </>
-            )}
-          </div>
+      {/* Compact content area — natural height. Card itself stretches
+          (h-full) within its row, but content rows remain at their natural
+          sizes so the GRID ROW can shrink when no card needs extra space. */}
+      <div className="px-2 pt-1 pb-1 flex flex-col gap-[2px] flex-1 min-w-0">
+        {/* Name — natural height (1 or 2 lines). CSS-Grid keeps cards in the
+            SAME ROW visually aligned; a row of all single-line names is shorter
+            than a row containing a wrap. */}
+        <div
+          className="font-bold text-[11px] text-slate-900 leading-[1.18] line-clamp-2"
+          title={seller.name}
+        >
+          {seller.name}
         </div>
 
-        {/* Years experience · Response rate (rating moved to image overlay).
-            Fixed min-height to keep card sync if either field is missing. */}
+        {/* MERGED metadata row: location · years · reply
+            (saves a full row vs. the previous 2-row layout). Uses a single
+            line + truncate so very long city,state values just clip. */}
         <div
-          className="flex items-center gap-1 text-[9px] font-semibold text-slate-600 leading-none"
+          className="flex items-center gap-1 text-[9px] text-slate-500 leading-none min-w-0"
           style={{ minHeight: "12px" }}
+          title={`${seller.location || ""}${seller.yearsExp != null ? ` · ${seller.yearsExp} yrs experience` : ""}${seller.responsiveness != null ? ` · ${seller.responsiveness}% reply rate` : ""}`}
         >
-          {seller.yearsExp != null && (
-            <span
-              className="inline-flex items-center gap-0.5"
-              title={`${yearsExp} years of business experience`}
-            >
-              <Briefcase size={8} className="text-slate-500" />
-              {yearsExp} yrs
+          {seller.location && (
+            <span className="inline-flex items-center gap-0.5 min-w-0 truncate">
+              <MapPin size={8} className="text-slate-400 shrink-0" />
+              <span className="truncate">{seller.location}</span>
             </span>
           )}
-          {seller.yearsExp != null && seller.responsiveness != null && (
-            <span className="w-px h-2 bg-slate-300" aria-hidden="true" />
+          {seller.yearsExp != null && (
+            <>
+              <span className="w-px h-2 bg-slate-300 shrink-0" aria-hidden="true" />
+              <span className="inline-flex items-center gap-0.5 shrink-0 text-slate-600 font-semibold">
+                <Briefcase size={8} className="text-slate-500" />
+                {yearsExp}y
+              </span>
+            </>
           )}
           {seller.responsiveness != null && (
-            <span
-              className="inline-flex items-center gap-0.5"
-              title={`Average seller response rate: ${responseRate}%`}
-            >
-              <Zap size={8} className="text-amber-500" />
-              {responseRate}% reply
-            </span>
+            <>
+              <span className="w-px h-2 bg-slate-300 shrink-0" aria-hidden="true" />
+              <span className="inline-flex items-center gap-0.5 shrink-0 text-slate-600 font-semibold">
+                <Zap size={8} className="text-amber-500" />
+                {responseRate}%
+              </span>
+            </>
           )}
         </div>
 
-        {/* Trust chip row — fixed reserved height so cards stay vertically
-            synced no matter which combination of GST / TrustSEAL /
-            Pay-Protected is present (missing chips render muted+strike-through). */}
+        {/* Trust chip row — declutter: only ACTIVE chips render. Reserved
+            min-height keeps cards vertically aligned even if a card has no
+            trust signals. */}
         <div className="flex items-center gap-[3px] flex-wrap min-h-[16px]">
           <Tag
             active={!!seller.gst}
             label="GST"
             icon={CheckCircle2}
             activeClass="text-emerald-700 bg-emerald-50"
-            inactiveClass="text-slate-400 bg-slate-100 line-through"
           />
           <Tag
             active={!!seller.trustSeal}
             label="TrustSEAL"
             icon={ShieldCheck}
             activeClass="text-[#0f1f5c] bg-[#0f1f5c]/8"
-            inactiveClass="text-slate-400 bg-slate-100 line-through"
           />
           <Tag
             active={!!seller.paymentProtected}
             label="Pay-Protected"
             icon={CheckCircle2}
             activeClass="text-[#0a6640] bg-[#0a6640]/10"
-            inactiveClass="text-slate-400 bg-slate-100 line-through"
           />
           {/* Spec-match chip ONLY in Find-Best-Match phase */}
           {showSpecMatch && (
@@ -204,20 +193,18 @@ export default function SellerCard({
           )}
         </div>
 
-        {/* CTA row — proportions SWAP when phone is revealed
-            Default   :  [ Send Enquiry (flex-1) ]  [ 📞 (icon) ]
-            Revealed  :  [ 📤 (icon) ]              [ 📞 +91 XX XXX XXXXX (flex-1) ]
-            Sent      :  Send Enquiry icon → green ✓  */}
-        <div className="flex gap-1 mt-auto pt-1">
-          {/* Send Enquiry — width animates between flex-1 and w-9 */}
+        {/* CTA row — proportions SWAP when phone is revealed.
+            Height reduced to 24 px (h-6) to give image more vertical space. */}
+        <div className="flex gap-1 mt-auto pt-0.5">
+          {/* Send Enquiry — width animates between flex-1 and w-8 */}
           <button
             data-testid={`seller-enquiry-${seller.name}`}
             onClick={handleEnquiry}
             aria-label={sent ? "Enquiry sent" : "Send enquiry"}
             title={sent ? "Enquiry sent" : "Send enquiry"}
             disabled={sent}
-            className={`relative h-7 shrink-0 rounded-md flex items-center justify-center gap-1 overflow-hidden transition-all duration-300 ease-out ${
-              showPhone ? "w-9" : "flex-1 px-2"
+            className={`relative h-6 shrink-0 rounded-md flex items-center justify-center gap-1 overflow-hidden transition-all duration-300 ease-out ${
+              showPhone ? "w-8" : "flex-1 px-2"
             } ${
               sent
                 ? "bg-emerald-500 text-white cursor-default"
@@ -226,23 +213,22 @@ export default function SellerCard({
           >
             <span className="inline-flex items-center justify-center shrink-0">
               {sent ? (
-                <Check size={14} strokeWidth={3} />
+                <Check size={12} strokeWidth={3} />
               ) : (
-                <Send size={showPhone ? 12 : 11} strokeWidth={2.5} />
+                <Send size={showPhone ? 11 : 10} strokeWidth={2.5} />
               )}
             </span>
-            {/* Label only shows when not in minimized (phone-revealed) mode */}
             {!showPhone && (
               <span
                 key={sent ? "sent-label" : "enquiry-label"}
-                className="text-[11px] font-bold whitespace-nowrap animate-call-flip"
+                className="text-[10.5px] font-bold whitespace-nowrap animate-call-flip"
               >
                 {sent ? "Sent" : "Send Enquiry"}
               </span>
             )}
           </button>
 
-          {/* Call — width animates between w-9 (icon only) and flex-1 (full number) */}
+          {/* Call — width animates between w-8 (icon only) and flex-1 (full number) */}
           <button
             data-testid={`seller-call-${seller.name}`}
             onClick={(e) => {
@@ -252,19 +238,19 @@ export default function SellerCard({
             aria-expanded={showPhone}
             aria-label={showPhone ? `Hide number ${phoneNumber}` : "Reveal phone number"}
             title={showPhone ? "Click to hide" : "Click to reveal number"}
-            className={`h-7 shrink-0 rounded-md border font-bold transition-all duration-300 ease-out flex items-center justify-center gap-1 overflow-hidden ${
-              showPhone ? "flex-1 px-2 min-w-0" : "w-9"
+            className={`h-6 shrink-0 rounded-md border font-bold transition-all duration-300 ease-out flex items-center justify-center gap-1 overflow-hidden ${
+              showPhone ? "flex-1 px-2 min-w-0" : "w-8"
             } ${
               showPhone
                 ? "bg-[#0f1f5c] border-[#0f1f5c] text-white"
                 : "bg-white border-[#0f1f5c] text-[#0f1f5c] hover:bg-[#0f1f5c] hover:text-white"
             }`}
           >
-            <Phone size={showPhone ? 11 : 12} className="shrink-0" />
+            <Phone size={showPhone ? 10 : 11} className="shrink-0" />
             {showPhone && (
               <span
                 key="phone-number"
-                className="tabular-nums tracking-tight text-[10.5px] truncate animate-call-flip"
+                className="tabular-nums tracking-tight text-[10px] truncate animate-call-flip"
               >
                 {phoneNumber}
               </span>

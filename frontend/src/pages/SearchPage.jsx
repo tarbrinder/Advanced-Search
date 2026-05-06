@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Filter, ChevronDown, ChevronUp, SlidersHorizontal,
+  ArrowLeft, ArrowRight, Filter, ChevronDown, ChevronUp, SlidersHorizontal,
   Factory, Globe2, Package, Store, ShoppingBag, Wrench, Sparkles,
   ShieldCheck, CheckCircle2, IndianRupee, Star,
 } from "lucide-react";
@@ -132,9 +132,17 @@ export default function SearchPage() {
     [filteredSellers, productSpecs, assistantAnswers]
   );
 
-  // In filters phase show 10, in results phase show 5
-  const cardLimit = phase === "results" ? 5 : 10;
-  const visibleSellers = ranked.slice(0, cardLimit);
+  // In filters phase show 8 (4×2 rows). In results phase show 4 in a single row,
+  // paginated via the carousel arrows so the rest of the sellers stay reachable.
+  const PAGE_SIZE_RESULTS = 4;
+  const cardLimit = phase === "results" ? PAGE_SIZE_RESULTS : 8;
+  const [bestMatchPage, setBestMatchPage] = useState(0);
+  const totalResultPages = Math.max(1, Math.ceil(ranked.length / PAGE_SIZE_RESULTS));
+  // Reset carousel page whenever the underlying list changes
+  useEffect(() => { setBestMatchPage(0); }, [ranked.length]);
+  const visibleSellers = phase === "results"
+    ? ranked.slice(bestMatchPage * PAGE_SIZE_RESULTS, bestMatchPage * PAGE_SIZE_RESULTS + PAGE_SIZE_RESULTS)
+    : ranked.slice(0, cardLimit);
 
   const handleAssistantSubmit = () => {
     setToastOpen(true);
@@ -244,25 +252,24 @@ export default function SearchPage() {
 
         {/* Right content — flex column, internal regions sized so no page scroll */}
         <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          {/* Sub-header — query + location + Local only + count
-              (moved into main column so the left nav + refine panel extend to header) */}
+          {/* Sub-header — Back · query · location · Local only · count */}
           <div className="bg-white border-b border-slate-200 shrink-0">
-            <div className="px-3 md:px-5 py-2 flex items-center gap-3 flex-wrap">
+            <div className="px-3 md:px-5 py-2 flex items-center gap-2.5 flex-wrap">
               <button
                 data-testid="back-btn"
                 onClick={() => nav(-1)}
-                className="shrink-0 inline-flex items-center gap-1 text-slate-600 hover:text-[#0f1f5c] text-[12px] font-semibold"
+                aria-label="Back"
+                title="Back"
+                className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md text-slate-600 hover:text-[#0f1f5c] hover:bg-slate-100 transition-colors"
               >
-                <ArrowLeft size={15} /> Back
+                <ArrowLeft size={16} />
               </button>
-              <div className="shrink-0 flex items-center gap-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#6d28d9] bg-[#6d28d9]/10 px-2 py-0.5 rounded">
-                  Product Search
-                </span>
-                <h1 data-testid="search-page-query" className="text-[15px] md:text-[16px] font-bold text-[#0a6640] tracking-tight">
-                  {query}
-                </h1>
-              </div>
+              <h1
+                data-testid="search-page-query"
+                className="shrink-0 text-[16px] md:text-[17px] font-bold text-[#0a6640] tracking-tight truncate max-w-[40vw] capitalize"
+              >
+                {query}
+              </h1>
               <div className="flex items-center gap-2 ml-auto flex-wrap">
                 <LocationPicker value={location} onChange={setLocation} />
                 <label
@@ -345,39 +352,112 @@ export default function SearchPage() {
                 </div>
               )}
 
-              {/* Sellers grid — rows use minmax(160px, 220px) so cards stay
-                  visually consistent across screen sizes AND fit without scroll
-                  on small laptops (1366×768). Container itself is NOT flex-1
-                  so it doesn't stretch at large viewports. */}
-              <div
-                data-testid="sellers-grid"
-                className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 min-h-0 overflow-hidden shrink-0"
-                style={{ gridTemplateRows: phase === "results" ? "minmax(190px, 210px)" : "repeat(2, minmax(190px, 210px))" }}
-              >
-                {ranked.slice(0, cardLimit).map((s, i) => (
-                  <SellerCard
-                    key={s.name + i}
-                    seller={s}
-                    totalFilters={totalFiltersCount}
-                    showSpecMatch={phase === "results"}
-                    onFavToggle={(n) => {
-                      const nx = new Set(favorites);
-                      nx.has(n) ? nx.delete(n) : nx.add(n);
-                      setFavorites(nx);
-                    }}
-                    isFav={favorites.has(s.name)}
-                    onEnquiry={(sel) => {
-                      setEnquiryToast({ sellerName: sel.name, at: Date.now() });
-                      setTimeout(() => setEnquiryToast(null), 2400);
-                    }}
-                  />
-                ))}
-                {ranked.length === 0 && (
-                  <div className="col-span-full text-center py-10 text-[13px] text-slate-500">
-                    No sellers found. Try removing a filter or expanding location.
+              {/* Sellers grid — 4 cols.
+                  - In FILTERS phase: 4 × 2 = 8 cards (grid-auto rows).
+                  - In RESULTS phase: a SINGLE row of 4 with prev/next arrows
+                    that page through the remaining sellers (no clutter, but
+                    nothing is hidden either). */}
+              {phase === "results" ? (
+                <div className="relative shrink-0">
+                  <div
+                    data-testid="sellers-grid"
+                    className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 min-h-0 overflow-hidden"
+                  >
+                    {visibleSellers.map((s, i) => (
+                      <SellerCard
+                        key={s.name + i + bestMatchPage}
+                        seller={s}
+                        totalFilters={totalFiltersCount}
+                        showSpecMatch={true}
+                        onFavToggle={(n) => {
+                          const nx = new Set(favorites);
+                          nx.has(n) ? nx.delete(n) : nx.add(n);
+                          setFavorites(nx);
+                        }}
+                        isFav={favorites.has(s.name)}
+                        onEnquiry={(sel) => {
+                          setEnquiryToast({ sellerName: sel.name, at: Date.now() });
+                          setTimeout(() => setEnquiryToast(null), 2400);
+                        }}
+                      />
+                    ))}
+                    {ranked.length === 0 && (
+                      <div className="col-span-full text-center py-10 text-[13px] text-slate-500">
+                        No sellers found. Try removing a filter or expanding location.
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+
+                  {/* Carousel controls — show only when more than one page */}
+                  {totalResultPages > 1 && (
+                    <>
+                      <button
+                        data-testid="results-prev"
+                        onClick={() => setBestMatchPage((p) => Math.max(0, p - 1))}
+                        disabled={bestMatchPage === 0}
+                        aria-label="Previous sellers"
+                        className="absolute -left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-700 hover:text-[#0f1f5c] hover:border-[#0f1f5c] disabled:opacity-40 disabled:cursor-not-allowed transition-all z-10"
+                      >
+                        <ArrowLeft size={14} />
+                      </button>
+                      <button
+                        data-testid="results-next"
+                        onClick={() => setBestMatchPage((p) => Math.min(totalResultPages - 1, p + 1))}
+                        disabled={bestMatchPage >= totalResultPages - 1}
+                        aria-label="Next sellers"
+                        className="absolute -right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-700 hover:text-[#0f1f5c] hover:border-[#0f1f5c] disabled:opacity-40 disabled:cursor-not-allowed transition-all z-10"
+                      >
+                        <ArrowRight size={14} />
+                      </button>
+                      <div
+                        data-testid="results-pagination"
+                        className="absolute -bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1"
+                      >
+                        {Array.from({ length: totalResultPages }).map((_, p) => (
+                          <button
+                            key={p}
+                            onClick={() => setBestMatchPage(p)}
+                            aria-label={`Page ${p + 1}`}
+                            className={`h-1.5 rounded-full transition-all ${
+                              p === bestMatchPage ? "w-4 bg-[#0f1f5c]" : "w-1.5 bg-slate-300 hover:bg-slate-400"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div
+                  data-testid="sellers-grid"
+                  className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 min-h-0 overflow-hidden shrink-0"
+                  style={{ gridTemplateRows: "min-content min-content" }}
+                >
+                  {visibleSellers.map((s, i) => (
+                    <SellerCard
+                      key={s.name + i}
+                      seller={s}
+                      totalFilters={totalFiltersCount}
+                      showSpecMatch={false}
+                      onFavToggle={(n) => {
+                        const nx = new Set(favorites);
+                        nx.has(n) ? nx.delete(n) : nx.add(n);
+                        setFavorites(nx);
+                      }}
+                      isFav={favorites.has(s.name)}
+                      onEnquiry={(sel) => {
+                        setEnquiryToast({ sellerName: sel.name, at: Date.now() });
+                        setTimeout(() => setEnquiryToast(null), 2400);
+                      }}
+                    />
+                  ))}
+                  {ranked.length === 0 && (
+                    <div className="col-span-full text-center py-10 text-[13px] text-slate-500">
+                      No sellers found. Try removing a filter or expanding location.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Buyer assistant — appears in results phase */}
               {phase === "results" && (
@@ -428,10 +508,10 @@ export default function SearchPage() {
 function Section({ title, icon: Icon, openKey, openSections, setOpenSections, children, count }) {
   const open = openSections[openKey];
   return (
-    <div className="rounded-lg border border-slate-200 bg-white">
+    <div className="border-t border-slate-100 first:border-t-0 -mx-3 px-3">
       <button
         onClick={() => setOpenSections((s) => ({ ...s, [openKey]: !s[openKey] }))}
-        className="w-full flex items-center gap-2 px-3 py-2"
+        className="w-full flex items-center gap-2 py-2.5"
       >
         {Icon && <Icon size={13} className="text-[#0f1f5c]" />}
         <span className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider flex-1 text-left">{title}</span>
@@ -440,7 +520,7 @@ function Section({ title, icon: Icon, openKey, openSections, setOpenSections, ch
         )}
         {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
       </button>
-      {open && <div className="px-3 pb-3">{children}</div>}
+      {open && <div className="pb-3">{children}</div>}
     </div>
   );
 }
@@ -461,149 +541,149 @@ function FilterPanel(props) {
   const matVisible = showAllMat ? MATERIALS_ALL : MATERIALS_ALL.slice(0, 5);
   const hasMaterialSpec = specs.some((s) => s.name.toLowerCase() === "material");
 
+  // Mobile-only close affordance (desktop has no header bar — declutters the panel)
+  const MobileClose = (
+    <div className="lg:hidden flex items-center justify-between px-3 py-2 border-b border-slate-100 bg-white shrink-0">
+      <span className="text-[12px] font-bold text-slate-800 inline-flex items-center gap-1.5">
+        <Filter size={14} className="text-[#0f1f5c]" /> Filters
+      </span>
+      <button onClick={onMobileClose} className="text-slate-500 text-[14px] leading-none">✕</button>
+    </div>
+  );
+
   const Inner = (
     <>
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100 bg-white shrink-0">
-        <Filter size={15} className="text-[#0f1f5c]" />
-        <span className="text-[12px] font-bold text-slate-800">Refine Results</span>
-        <button
-          onClick={onMobileClose}
-          className="ml-auto lg:hidden text-slate-500 text-[12px]"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-        {/* Specifications — first */}
-        <Section title="Specifications" icon={SlidersHorizontal} openKey="specs" openSections={openSections} setOpenSections={setOpenSections}>
-          {/* Quantity */}
-          <div className="mb-2 mt-1">
-            <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Quantity</div>
-            <div className="flex items-center gap-1.5">
-              <input
-                data-testid="qty-input"
-                type="number"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                placeholder="0"
-                className="w-14 h-7 px-2 text-[12px] rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1f5c]/30 focus:border-[#0f1f5c]"
-              />
-              <div className="flex rounded-md border border-slate-200 overflow-hidden bg-white">
-                {UNITS.map((u) => (
-                  <button
-                    key={u}
-                    onClick={() => setUnit(u)}
-                    className={`px-2 h-7 text-[10.5px] font-medium transition-colors ${
-                      unit === u ? "bg-teal-500 text-white" : "text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {u}
-                  </button>
-                ))}
-              </div>
+      {MobileClose}
+      <div className="flex-1 overflow-y-auto px-3 pt-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+        {/* Quantity — first, no wrapper section */}
+        <div className="py-3 border-b border-slate-100">
+          <div className="text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Quantity</div>
+          <div className="flex items-center gap-1.5">
+            <input
+              data-testid="qty-input"
+              type="number"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder="0"
+              className="w-14 h-7 px-2 text-[12px] rounded-md border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0f1f5c]/30 focus:border-[#0f1f5c]"
+            />
+            <div className="flex rounded-md border border-slate-200 overflow-hidden bg-white">
+              {UNITS.map((u) => (
+                <button
+                  key={u}
+                  onClick={() => setUnit(u)}
+                  className={`px-2 h-7 text-[10.5px] font-medium transition-colors ${
+                    unit === u ? "bg-teal-500 text-white" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {u}
+                </button>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Product-specific */}
-          {specs.length > 0 ? specs.map((spec) => (
-            <div key={spec.name} data-testid={`spec-${spec.name}`} className="mb-2">
-              <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">{spec.name}</div>
-              <div className="flex flex-wrap gap-1">
-                {spec.options.map((opt) => {
-                  const sel = productSpecs[spec.name] === opt;
-                  return (
-                    <button
-                      key={opt}
-                      data-testid={`spec-chip-${spec.name}-${opt}`}
-                      onClick={() => handleSpecChange(spec.name, sel ? null : opt)}
-                      className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
-                        sel
-                          ? "bg-teal-500 border-teal-500 text-white font-semibold"
-                          : "border-slate-200 text-slate-600 hover:border-teal-400 bg-white"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )) : (
-            <div className="text-[11px] text-slate-400 italic">Specifications load based on product</div>
-          )}
-
-          {/* Material */}
-          {!hasMaterialSpec && (
-            <div className="mb-2">
-              <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Material</div>
-              <div className="flex flex-wrap gap-1">
-                {matVisible.map((m) => (
+        {/* Product-specific specs — flat layout, no nested box */}
+        {specs.length > 0 && specs.map((spec) => (
+          <div
+            key={spec.name}
+            data-testid={`spec-${spec.name}`}
+            className="py-3 border-b border-slate-100"
+          >
+            <div className="text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">{spec.name}</div>
+            <div className="flex flex-wrap gap-1">
+              {spec.options.map((opt) => {
+                const sel = productSpecs[spec.name] === opt;
+                return (
                   <button
-                    key={m}
-                    onClick={() => toggleArr(selectedMat, setSelectedMat, m)}
+                    key={opt}
+                    data-testid={`spec-chip-${spec.name}-${opt}`}
+                    onClick={() => handleSpecChange(spec.name, sel ? null : opt)}
                     className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
-                      selectedMat.includes(m)
-                        ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
-                        : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                      sel
+                        ? "bg-teal-500 border-teal-500 text-white font-semibold"
+                        : "border-slate-200 text-slate-600 hover:border-teal-400 bg-white"
                     }`}
                   >
-                    {m}
+                    {opt}
                   </button>
-                ))}
-                <button
-                  onClick={() => setShowAllMat((s) => !s)}
-                  className="px-2 h-6 text-[10.5px] text-teal-600 font-semibold hover:underline"
-                >
-                  {showAllMat ? "Less ↑" : "More ↓"}
-                </button>
-              </div>
+                );
+              })}
             </div>
-          )}
+          </div>
+        ))}
 
-          {/* Brand */}
-          <div className="mb-2">
-            <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Brand</div>
+        {/* Material — only when not already covered by product specs */}
+        {!hasMaterialSpec && (
+          <div className="py-3 border-b border-slate-100">
+            <div className="text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Material</div>
             <div className="flex flex-wrap gap-1">
-              {BRANDS.map((b) => (
+              {matVisible.map((m) => (
                 <button
-                  key={b}
-                  onClick={() => toggleArr(selectedBrand, setSelectedBrand, b)}
+                  key={m}
+                  onClick={() => toggleArr(selectedMat, setSelectedMat, m)}
                   className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
-                    selectedBrand.includes(b)
+                    selectedMat.includes(m)
                       ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
                       : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
                   }`}
                 >
-                  {b}
+                  {m}
                 </button>
               ))}
+              <button
+                onClick={() => setShowAllMat((s) => !s)}
+                className="px-2 h-6 text-[10.5px] text-teal-600 font-semibold hover:underline"
+              >
+                {showAllMat ? "Less ↑" : "More ↓"}
+              </button>
             </div>
           </div>
+        )}
 
-          {/* Certification */}
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 mb-1 uppercase tracking-wide">Certification</div>
-            <div className="flex flex-wrap gap-1">
-              {CERTS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => toggleArr(selectedCert, setSelectedCert, c)}
-                  className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
-                    selectedCert.includes(c)
-                      ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
-                      : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
+        {/* Brand */}
+        <div className="py-3 border-b border-slate-100">
+          <div className="text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Brand</div>
+          <div className="flex flex-wrap gap-1">
+            {BRANDS.map((b) => (
+              <button
+                key={b}
+                onClick={() => toggleArr(selectedBrand, setSelectedBrand, b)}
+                className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
+                  selectedBrand.includes(b)
+                    ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
+                    : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
           </div>
-        </Section>
+        </div>
 
-        {/* Trust Filters — second */}
+        {/* Certification */}
+        <div className="py-3 border-b border-slate-100">
+          <div className="text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Certification</div>
+          <div className="flex flex-wrap gap-1">
+            {CERTS.map((c) => (
+              <button
+                key={c}
+                onClick={() => toggleArr(selectedCert, setSelectedCert, c)}
+                className={`px-2 h-6 text-[10.5px] rounded-md border transition-colors ${
+                  selectedCert.includes(c)
+                    ? "bg-teal-50 border-teal-400 text-teal-700 font-semibold"
+                    : "border-slate-200 text-slate-600 hover:border-teal-300 bg-white"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Trust Filters — collapsible */}
         <Section title="Trust Filters" icon={ShieldCheck} openKey="trust" openSections={openSections} setOpenSections={setOpenSections} count={selectedTrust.length}>
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="flex flex-wrap gap-1">
             {TRUST_FILTERS.map((t) => {
               const Icon = t.icon;
               const sel = selectedTrust.includes(t.id);
@@ -636,9 +716,9 @@ function FilterPanel(props) {
           </div>
         </Section>
 
-        {/* Business Type — third */}
+        {/* Business Type — collapsible */}
         <Section title="Business Type" icon={Factory} openKey="biz" openSections={openSections} setOpenSections={setOpenSections} count={selectedBiz.length}>
-          <div className="space-y-1.5 mt-1">
+          <div className="space-y-1.5">
             {BUSINESS_TYPES.map((b) => {
               const Icon = b.icon;
               const checked = selectedBiz.includes(b.id);

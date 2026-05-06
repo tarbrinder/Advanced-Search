@@ -29,6 +29,14 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - `src/components/Footer.jsx` — 4-column footer
 - `src/components/SearchModal.jsx` — full-screen-ish modal with filters + sellers grid + "Find Best Match"
 - `src/data/mockData.js` — static dataset + client-side `searchSellers()`
+## Completed (2026-05-06 · v12 — bigger product image, adaptive row heights)
+- [x] **Image height +27%**: 88 px → **112 px** by reclaiming space from CTAs, padding, gaps and a merged metadata row.
+- [x] **Adaptive row heights** via `gridTemplateRows: min-content`: a row of all single-line names (e.g. row 2 of search) is **195 px**, while a row containing a 2-line wrap (e.g. "Bharat Heavy Electricals & Industrial Diesel Solutions Ltd") is **208 px**. CSS Grid still equalizes cards within a row — no card-height drift.
+- [x] **Merged metadata row** (`📍 location · 💼 14y · ⚡ 92%`): saves ~12 px vs. previous 2-row Location + Yrs/Reply layout.
+- [x] **Smaller CTAs**: `h-7 → h-6` (`28 → 24 px`), with proportional icon/text resizing. Send Enquiry / Call swap behavior unchanged.
+- [x] Removed `min-h: 26px` reservation on title — single-line names naturally take just 13 px; 2-line names still wrap cleanly via `line-clamp-2`.
+- [x] Verified at 1366×768: page no scroll, grid no scroll, image 112 px on every card, row 1 = 208 px (with wrap), row 2 = 195 px (no wrap).
+
 ## Completed (2026-05-05 · v11 — card-sync edge cases + spec-match phase gating)
 - [x] **Name 2-line wrap supported**: `line-clamp-2` + `min-h: 26px` reservation — short and long names produce identical card height. Verified with seed "Bharat Heavy Electricals & Industrial Diesel Solutions Ltd" → 2 lines, same 210 px.
 - [x] **Reserved row heights** for Location (`min-h: 13px`) and Yrs/Reply (`min-h: 12px`) — cards remain perfectly synced even if a seller record is missing those fields.
@@ -134,7 +142,20 @@ User shared the reference URL `https://new-buyer-my-duplica-vzmj.bolt.host` and 
 - [x] Profile progress bar, RFQ banner, dismissible cards
 - [x] Floating help button, hover states, focus rings, shadows
 
+## Completed (2026-02 · v3 — Search Page declutter pass)
+- [x] Grid switched from 5 → 4 columns on desktop (cleaner card density)
+- [x] Filters phase shows 4 × 2 = 8 sellers (rest reachable via Find Best Match)
+- [x] Find Best Match phase shows a single row of 4 cards with prev/next carousel arrows + pagination dots — full seller list paginated, vertical space freed for the assistant
+- [x] Removed redundant "Refine Results" header AND "Specifications" section wrapper from filter panel — flat layout with thin dividers (no more "border inside border" double-frame on desktop)
+- [x] Removed purple "Product Search" pill in sub-header; Back becomes a clean icon-only 28px button; query heading uses larger 16-17px emerald font
+- [x] SellerCard declutter — inactive trust chips (GST / TrustSEAL / Pay-Protected) are now hidden instead of strike-through (`min-h-[16px]` reservation preserves vertical alignment)
+
 ## Backlog / P1
+- [ ] Refactor `SearchPage.jsx` (~700 lines) into `<FilterPanel/>` and `<SearchSubHeader/>` modules
+- [ ] Mobile (414px) responsiveness QA — sub-header wrap + 2-col card grid
+- [ ] Hover tooltip showing full company name on truncated 2-line titles
+- [ ] "Top Pick" / "Best Match" ribbon on card #1 in FBM phase
+- [ ] Image fallback gradient placeholder to avoid broken-image flash
 - [ ] Post RFQ flow (modal with form)
 - [ ] "Continue with Seller" / "Send Enquiry" chat UI
 - [ ] Compare Quotes side-by-side view
